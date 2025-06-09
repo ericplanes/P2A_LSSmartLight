@@ -65,18 +65,18 @@ Format: `"F 16:30 1-0 2-3 3-3 4-0 5-9 6-A"`
 
 ## 🏗️ Arquitectura del Sistema
 
-### **Mòduls Planificats**
+### **Arquitectura Modular**
 
-```
-TLights.c/h      - Control PWM 6 llums (2 HW + 4 SW)
-TRFID.c/h        - Comunicació SPI cooperativa amb RFID-RC522
-TKeypad.c/h      - Lectura teclat matricial 3x4
-TLcd.c/h         - Gestió display LCD
-TUserConfig.c/h  - Emmagatzematge configuracions usuaris (EEPROM)
-TSerial.c/h      - Comunicació sèrie amb ordinador
-TController.c/h  - Màquina d'estats principal
-Utils.h          - Definicions tipus i constants
-```
+Sistema organitzat en mòduls cooperatius independents:
+
+- **TLights**: Control PWM 6 llums (2 HW + 4 SW)
+- **TRFID**: Comunicació SPI cooperativa amb RFID-RC522
+- **TKeypad**: Lectura teclat matricial 3x4
+- **TLcd**: Gestió display LCD
+- **TUserConfig**: Emmagatzematge configuracions usuaris (EEPROM)
+- **TSerial**: Comunicació sèrie amb ordinador
+- **TController**: Màquina d'estats principal
+- **Utils**: Definicions tipus i constants compartides
 
 ### **Assignació Pins (Planificada)**
 
@@ -97,47 +97,48 @@ Utils.h          - Definicions tipus i constants
 
 ## 🛠️ Configuració Entorn Desenvolupament
 
-### **✅ Visual Studio Code (Recomanat)**
+### **✅ MPLAB X IDE (Principal)**
 
-Plugins necessaris:
+- **Versió recomanada**: MPLAB X IDE v6.00 o superior
+- **Compilador**: XC8 v2.46 o superior
+- **Dispositiu**: PIC18F4321
+- **Compatible**: Windows, macOS, Linux
 
-- **C/C++** de Microsoft
-- **Makefile Tools** (opcional)
+### **Configuració Cross-Platform**
 
-### **Configuració Inclosa**
+El projecte està configurat per funcionar en diferents sistemes operatius:
 
-- `.vscode/c_cpp_properties.json` - IntelliSense per PIC18F4321
-- `.vscode/settings.json` - Configuració editor C
-- `.vscode/tasks.json` - Tasca build integrada
+- **Windows**: Path automàtic del compilador XC8
+- **macOS**: Path automàtic del compilador XC8
+- **Configuracions compartides**: `project.xml` i `configurations.xml`
 
-**📝 Nota**: El path del compilador està configurat per macOS. Adjusta segons el teu sistema:
+### **Desenvolupament en Equip (Mac + Windows)**
 
-```json
-"/Applications/microchip/xc8/v3.00/pic/include"
-```
+- **Equip mixt**: macOS i Windows treballant simultàniament
+- **Sincronització**: Git manté compatibilitat entre plataformes
+- **Configuracions locals**: Cada desenvolupador manté les seves preferències
 
 ---
 
 ## 🚀 Compilació i Programació
 
+### **Obrir Projecte**
+
+1. Obre **MPLAB X IDE**
+2. `File` → `Open Project`
+3. Selecciona la carpeta `P2A_LSSmartLight.X`
+4. El projecte es carregarà automàticament
+
 ### **Compilar Projecte**
 
-```bash
-make
-```
-
-### **Netejar Build**
-
-```bash
-make clean
-```
+- **Build**: `Production` → `Build Main Project` (F11)
+- **Clean & Build**: `Production` → `Clean and Build Main Project` (Shift+F11)
 
 ### **Programar Microcontrolador**
 
-1. Compila el projecte per generar `.hex`
-2. Obre **MPLAB IPE**
-3. Selecciona dispositiu `PIC18F4321`
-4. Carrega el `.hex` i programa
+1. Connecta el programador/debugger (PICkit, ICD, etc.)
+2. **Program**: `Production` → `Make and Program Device Main Project` (F5)
+3. **Debug**: `Debug` → `Debug Main Project` (Ctrl+F5)
 
 ---
 
@@ -145,15 +146,25 @@ make clean
 
 ```
 P2A_LSSmartLight.X/
-├── .vscode/                 # Configuració VS Code
 ├── nbproject/               # Configuració MPLAB X
+│   ├── project.xml          # Configuració projecte (compartida)
+│   └── configurations.xml   # Configuració target (compartida)
 ├── main.c                   # Punt entrada aplicació
 ├── Utils.h                  # Definicions tipus globals
 ├── Makefile                 # Build configuration
-├── README.md                # Aquest document
-├── .gitignore              # Fitxers exclosos git
-├── Enunciat-P2FA.txt       # Especificacions projecte
-└── Datasheet PIC18F4321.txt # Documentació tècnica
+└── README.md                # Aquest document
+```
+
+### **Mòduls a Desenvolupar**
+
+```
+├── TLights.c/h             # Control PWM 6 llums
+├── TRFID.c/h               # Comunicació SPI cooperativa RFID-RC522
+├── TKeypad.c/h             # Lectura teclat matricial 3x4
+├── TLcd.c/h                # Gestió display LCD
+├── TUserConfig.c/h         # Emmagatzematge configuracions (EEPROM)
+├── TSerial.c/h             # Comunicació sèrie ordinador
+└── TController.c/h         # Màquina d'estats principal
 ```
 
 ---
@@ -182,22 +193,6 @@ P2A_LSSmartLight.X/
 
 ---
 
-## 🎯 Estat Implementació
-
-- [x] **Estructura base projecte**
-- [x] **Configuració build i IDE**
-- [x] **Configuració microcontrolador**
-- [ ] **Mòdul control llums PWM**
-- [ ] **Driver RFID cooperatiu**
-- [ ] **Interfície teclat matricial**
-- [ ] **Control display LCD**
-- [ ] **Gestió configuracions usuaris**
-- [ ] **Comunicació sèrie**
-- [ ] **Controlador principal**
-- [ ] **Testing i validació**
-
----
-
 ## 💼 Bones Pràctiques
 
 - 🌟 Utilitza **branches i Pull Requests** per desenvolupar mòduls
@@ -206,15 +201,6 @@ P2A_LSSmartLight.X/
 - 🧪 Testa cada mòdul independentment
 - ⚡ Optimitza ús memòria RAM
 - 🔄 Utilitza sistemes cooperatius (no bloquejants)
-
----
-
-## 📚 Referències Tècniques
-
-- **PIC18F4321 Datasheet**: [Datasheet PIC18F4321.txt](./Datasheet%20PIC18F4321.txt)
-- **Especificacions Projecte**: [Enunciat-P2FA.txt](./Enunciat-P2FA.txt)
-- **RFID-RC522**: Documentació disponible a estudy
-- **XC8 Compiler**: Microchip Development Tools
 
 ---
 

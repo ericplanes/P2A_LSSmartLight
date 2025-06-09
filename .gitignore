@@ -1,5 +1,7 @@
-# Carpetes temporals de MPLAB
-nbproject/
+# Carpetes temporals de MPLAB  
+nbproject/private/
+nbproject/Makefile-*.mk
+nbproject/Makefile-*.properties
 dist/
 build/
 
