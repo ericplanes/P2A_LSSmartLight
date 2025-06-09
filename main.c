@@ -19,11 +19,13 @@ void main(void);
  *               MAIN
  * ======================================= */
 
+/*
 void __interrupt() RSI_High(void)
 {
     // Interrupt service routine
     // TODO: Add interrupt handling for smart light functionality
 }
+//*/
 
 void main(void)
 {
@@ -47,8 +49,8 @@ void main(void)
         // LightControl_Motor();
         // SensorInput_Motor();
         // Communication_Motor();
-        
+
         // Placeholder for now
         __delay_ms(100);
     }
-} 
+}
