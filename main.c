@@ -2,6 +2,8 @@
 #include <pic18f4321.h>
 
 #include "Utils.h"
+#include "TTimer.h"
+#include "TEEPROM.h"
 
 // Configuration bits
 #pragma config OSC = INTIO2
@@ -19,23 +21,21 @@ void main(void);
  *               MAIN
  * ======================================= */
 
-/*
 void __interrupt() RSI_High(void)
 {
-    // Interrupt service routine
-    // TODO: Add interrupt handling for smart light functionality
+    if (INTCONbits.TMR0IF == 1)
+    {
+        Timer0_ISR();
+    }
 }
-//*/
 
 void main(void)
 {
-    // Set internal oscillator to 8 MHz
-    OSCCONbits.IRCF = 0b111; // IRCF = 111: 8 MHz
-    OSCTUNEbits.PLLEN = 1;   // Enable 4x PLL => 32 MHz
-    OSCCONbits.SCS = 0b00;   // Use clock defined by CONFIG
+    // Initialize smart light subsystems
+    TiInit();
+    EEPROM_Init();
 
-    // TODO: Initialize smart light subsystems
-    // Examples:
+    // TODO: Initialize remaining subsystems
     // LED_Init();
     // PWM_Init();
     // SensorInput_Init();
