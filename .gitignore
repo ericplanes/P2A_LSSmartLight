@@ -25,6 +25,7 @@ Thumbs.db
 # Entorn de treball local
 .vscode/*
 !.vscode/settings.json
+!.vscode/tasks.json
 .clang-format.yaml
 
 # CLion / JetBrains IDE config
