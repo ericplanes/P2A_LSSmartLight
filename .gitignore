@@ -1,0 +1,28 @@
+# Carpetes temporals de MPLAB
+nbproject/
+dist/
+build/
+
+# Fitxers de compilació
+*.hex
+*.elf
+*.cof
+*.o
+*.obj
+*.as
+*.lst
+*.map
+*.d
+*.txt
+*.pdf
+
+# Fitxers del sistema operatiu
+.DS_Store
+Thumbs.db
+
+# Entorn de treball local
+.vscode/
+.clang-format.yaml
+
+# CLion / JetBrains IDE config
+.idea/ 
