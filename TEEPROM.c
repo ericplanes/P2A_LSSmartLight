@@ -1,7 +1,7 @@
 #include "TEEPROM.h"
 
-#define LOG_SIZE 15 - 1
-#define MAX_LOGS 15
+#define NUM_LEDS 6
+#define MAX_USERS 42 // 256 bytes EEPROM / 6 bytes per user = 42 users max
 
 #define EEPROM_IDLE 0
 #define EEPROM_WRITING 1
@@ -10,6 +10,8 @@
 static BYTE write_pos = 0; // Separate position counter for writing
 static BYTE read_pos = 0;  // Separate position counter for reading
 static BYTE eeprom_state = EEPROM_IDLE;
+static BYTE base_address;
+static BYTE current_user = 0xFF; // Invalid initial value
 
 /* =======================================
  *       PRIVATE FUNCTION HEADERS
@@ -38,7 +40,7 @@ void EEPROM_CleanMemory(void)
     eeprom_state = EEPROM_IDLE;
 
     // Total EEPROM space used:
-    BYTE total_bytes = MAX_LOGS * LOG_SIZE;
+    BYTE total_bytes = MAX_USERS * NUM_LEDS;
 
     // Clean all used EEPROM bytes
     for (BYTE addr = 0; addr < total_bytes; addr++)
@@ -47,20 +49,27 @@ void EEPROM_CleanMemory(void)
     }
 }
 
-BOOL EEPROM_StoreLog(const BYTE *log_data)
+BOOL EEPROM_StoreConfigForUser(BYTE user, const BYTE *led_config)
 {
     if (eeprom_state == EEPROM_READING || EECON1bits.WR)
         return FALSE;
 
     eeprom_state = EEPROM_WRITING;
 
-    if (write_pos < LOG_SIZE)
+    // Only recalculate when user changes
+    if (user != current_user)
     {
-        write_byte(write_pos, log_data[write_pos]);
+        current_user = user;
+        base_address = user * NUM_LEDS;
+    }
+
+    if (write_pos < NUM_LEDS)
+    {
+        write_byte(base_address + write_pos, led_config[write_pos]);
         write_pos++;
     }
 
-    if (write_pos == LOG_SIZE)
+    if (write_pos == NUM_LEDS)
     {
         write_pos = 0;
         eeprom_state = EEPROM_IDLE;
@@ -70,22 +79,28 @@ BOOL EEPROM_StoreLog(const BYTE *log_data)
     return FALSE;
 }
 
-BOOL EEPROM_ReadLog(BYTE section, BYTE *log_data)
+BOOL EEPROM_ReadConfigForUser(BYTE user, BYTE *led_config)
 {
     if (eeprom_state == EEPROM_WRITING)
         return FALSE;
 
     eeprom_state = EEPROM_READING;
 
-    if (read_pos < LOG_SIZE)
+    // Only recalculate when user changes
+    if (user != current_user)
     {
-        log_data[read_pos] = read_byte(read_pos + (section * LOG_SIZE));
+        current_user = user;
+        base_address = user * NUM_LEDS;
+    }
+
+    if (read_pos < NUM_LEDS)
+    {
+        led_config[read_pos] = read_byte(base_address + read_pos);
         read_pos++;
     }
 
-    if (read_pos == LOG_SIZE)
+    if (read_pos == NUM_LEDS)
     {
-        log_data[read_pos] = '\0';
         eeprom_state = EEPROM_IDLE;
         read_pos = 0;
         return TRUE;
