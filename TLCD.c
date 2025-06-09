@@ -93,7 +93,7 @@ void LCD_WriteUserInfo(BYTE last_uid_char, BYTE hour, BYTE minute, BYTE *light_c
 
     write_command(LCD_CLEAR);
 
-    // First line: "F 16:30 1-0 2-3"
+    // First line: "F 16:30 1-0 2-0" (16 chars exactly)
     buffer[0] = hex_to_char(last_uid_char);
     buffer[1] = ' ';
     buffer[2] = '0' + (hour / 10);
@@ -109,13 +109,12 @@ void LCD_WriteUserInfo(BYTE last_uid_char, BYTE hour, BYTE minute, BYTE *light_c
     buffer[12] = '2';
     buffer[13] = '-';
     buffer[14] = hex_to_char(light_config[1]);
-    buffer[15] = ' ';
-    buffer[16] = '\0';
+    buffer[15] = '\0';
 
     set_cursor(0, 0);
     write_string(buffer);
 
-    // Second line: "3-3 4-0 5-9 6-A"
+    // Second line: "3-0 4-0 5-0 6-0" (15 chars)
     buffer[0] = '3';
     buffer[1] = '-';
     buffer[2] = hex_to_char(light_config[2]);
