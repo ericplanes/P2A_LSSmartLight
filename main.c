@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include "TTimer.h"
 #include "TEEPROM.h"
+#include "TLCD.h"
 
 // Configuration bits
 #pragma config OSC = INTIO2
@@ -20,8 +21,11 @@ void main(void);
 /* =======================================
  *               MAIN
  * ======================================= */
-
+#ifdef __XC8
 void __interrupt() RSI_High(void)
+#else
+void RSI_High(void) // For IntelliSense only
+#endif
 {
     if (INTCONbits.TMR0IF == 1)
     {
@@ -35,22 +39,7 @@ void main(void)
     TiInit();
     EEPROM_Init();
 
-    // TODO: Initialize remaining subsystems
-    // LED_Init();
-    // PWM_Init();
-    // SensorInput_Init();
-    // Communication_Init();
-
     while (TRUE)
     {
-        // Main loop for smart light functionality
-        // TODO: Add smart light motor functions
-        // Examples:
-        // LightControl_Motor();
-        // SensorInput_Motor();
-        // Communication_Motor();
-
-        // Placeholder for now
-        __delay_ms(100);
     }
 }
