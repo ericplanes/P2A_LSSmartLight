@@ -67,16 +67,7 @@ Format: `"F 16:30 1-0 2-3 3-3 4-0 5-9 6-A"`
 
 ### **Arquitectura Modular**
 
-Sistema organitzat en mòduls cooperatius independents:
-
-- **TLights**: Control PWM 6 llums (2 HW + 4 SW)
-- **TRFID**: Comunicació SPI cooperativa amb RFID-RC522
-- **TKeypad**: Lectura teclat matricial 3x4
-- **TLcd**: Gestió display LCD
-- **TUserConfig**: Emmagatzematge configuracions usuaris (EEPROM)
-- **TSerial**: Comunicació sèrie amb ordinador
-- **TController**: Màquina d'estats principal
-- **Utils**: Definicions tipus i constants compartides
+Sistema organitzat en mòduls cooperatius independents (A afegir):
 
 ### **Assignació Pins (Planificada)**
 
@@ -149,22 +140,11 @@ P2A_LSSmartLight.X/
 ├── nbproject/               # Configuració MPLAB X
 │   ├── project.xml          # Configuració projecte (compartida)
 │   └── configurations.xml   # Configuració target (compartida)
+├── vscode/settings.json     # Configuració codi VSCode (compartida)
 ├── main.c                   # Punt entrada aplicació
 ├── Utils.h                  # Definicions tipus globals
 ├── Makefile                 # Build configuration
 └── README.md                # Aquest document
-```
-
-### **Mòduls a Desenvolupar**
-
-```
-├── TLights.c/h             # Control PWM 6 llums
-├── TRFID.c/h               # Comunicació SPI cooperativa RFID-RC522
-├── TKeypad.c/h             # Lectura teclat matricial 3x4
-├── TLcd.c/h                # Gestió display LCD
-├── TUserConfig.c/h         # Emmagatzematge configuracions (EEPROM)
-├── TSerial.c/h             # Comunicació sèrie ordinador
-└── TController.c/h         # Màquina d'estats principal
 ```
 
 ---
@@ -197,10 +177,9 @@ P2A_LSSmartLight.X/
 
 - 🌟 Utilitza **branches i Pull Requests** per desenvolupar mòduls
 - 🤝 Coordina fitxers compartits amb l'equip
-- 📝 Documenta canvis significatius
-- 🧪 Testa cada mòdul independentment
-- ⚡ Optimitza ús memòria RAM
-- 🔄 Utilitza sistemes cooperatius (no bloquejants)
+- 📝 Documenta canvis significatius a les mateixes descripcions de les PRs
+- ⚡ Optimitza ús de la Program Memory
+- 🔄 Utilitza sistemes cooperatius (no bloquejants), evitant loops
 
 ---
 
@@ -209,7 +188,6 @@ P2A_LSSmartLight.X/
 - **Nom**: Eric Planes i Francesc Tur
 - **Universitat**: La Salle – Universitat Ramon Llull
 - **Curs**: Sistemes Digitals i Microprocessadors (2024-2025)
-- **Professor**: [Nom Professor]
 
 ---
 
