@@ -17,6 +17,7 @@ build/
 *.d
 *.txt
 *.pdf
+P2B*
 
 # Fitxers del sistema operatiu
 .DS_Store
