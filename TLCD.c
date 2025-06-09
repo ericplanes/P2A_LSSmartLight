@@ -174,13 +174,6 @@ void LCD_UpdateLightConfig(BYTE *light_config)
     write_data(hex_to_char(light_config[5]));
 }
 
-void LCD_Motor(void)
-{
-    // Non-blocking cooperative function
-    // Can be used for scrolling, blinking, or other LCD management tasks
-    // Currently empty - implement as needed
-}
-
 /* =======================================
  *          PRIVATE FUNCTION BODIES
  * ======================================= */
