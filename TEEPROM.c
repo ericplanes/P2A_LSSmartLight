@@ -7,8 +7,8 @@
 #define EEPROM_WRITING 1
 #define EEPROM_READING 2
 
-static BYTE write_pos = 0; // Separate position counter for writing
-static BYTE read_pos = 0;  // Separate position counter for reading
+static BYTE write_pos = 0;
+static BYTE read_pos = 0;
 static BYTE eeprom_state = EEPROM_IDLE;
 static BYTE base_address;
 static BYTE current_user = 0xFF; // Invalid initial value

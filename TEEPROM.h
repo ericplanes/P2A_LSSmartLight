@@ -10,13 +10,11 @@ void EEPROM_Init(void);
 
 BOOL EEPROM_StoreConfigForUser(BYTE user, const BYTE *led_config);
 // Pre: user is valid user index, led_config is array of 6 bytes with values 0-10
-// Post: Stores user's LED configuration in EEPROM (6 bytes: L0-L5)
-// Returns: TRUE if storage successful, FALSE if error occurred
+// Post: Stores user's LED configuration in EEPROM (6 bytes: L0-L5) and returns TRUE when it's done.
 
 BOOL EEPROM_ReadConfigForUser(BYTE user, BYTE *led_config);
 // Pre: user is valid user index, led_config is array of at least 6 bytes
-// Post: Reads user's LED configuration from EEPROM (6 bytes: L0-L5)
-// Returns: TRUE if read successful, FALSE if error occurred
+// Post: Reads user's LED configuration from EEPROM (6 bytes: L0-L5) and returns TRUE when it's done.
 
 void EEPROM_CleanMemory(void);
 // Post: Clears all stored user configurations and resets to default values
