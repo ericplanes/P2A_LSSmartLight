@@ -5,6 +5,7 @@
 #include "TTimer.h"
 #include "TEEPROM.h"
 #include "TLCD.h"
+#include "TKeypad.h"
 
 // Configuration bits
 #pragma config OSC = INTIO2
@@ -38,8 +39,10 @@ void main(void)
     // Initialize smart light subsystems
     TiInit();
     EEPROM_Init();
-
+    LCD_Init();
+    KEY_Init();
     while (TRUE)
     {
+        KEY_Motor();
     }
 }

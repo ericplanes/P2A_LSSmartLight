@@ -6,6 +6,7 @@
 #include <xc.h>
 #include "pic18f4321.h"
 
+#define TWO_MS 1       // 2ms per tick
 #define ONE_SECOND 500 // 1 interruption every 2ms
 #define ONE_MINUTE 60 * ONE_SECOND
 
