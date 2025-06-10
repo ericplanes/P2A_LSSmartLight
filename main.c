@@ -6,6 +6,7 @@
 #include "TEEPROM.h"
 #include "TLCD.h"
 #include "TKeypad.h"
+#include "THora.h"
 
 // Configuration bits
 #pragma config OSC = INTIO2
@@ -20,7 +21,7 @@
 void main(void);
 
 /* =======================================
- *               MAIN
+ *               INTERRUPTS
  * ======================================= */
 #ifdef __XC8
 void __interrupt() RSI_High(void)
@@ -34,15 +35,23 @@ void RSI_High(void) // For IntelliSense only
     }
 }
 
+/* =======================================
+ *               MAIN
+ * ======================================= */
 void main(void)
 {
-    // Initialize smart light subsystems
+    // Initialize all modules
     TiInit();
     EEPROM_Init();
     LCD_Init();
     KEY_Init();
+    HORA_Init();
+
+    // Main cooperative loop
     while (TRUE)
     {
+        // Run all module motors
         KEY_Motor();
+        HORA_Motor();
     }
 }
