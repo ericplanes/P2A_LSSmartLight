@@ -9,7 +9,7 @@
 // Bits 2-0: T0PS = 010 → 1:8 prescaler
 #define T0CON_CONFIG 0b10000010
 #define TMR0_INT_2MS 63536 // 2 ms con Fosc = 32 MHz y prescaler 1:8
-#define TI_NUMTIMERS 5     // Amount of timers being used on the system
+#define TI_NUMTIMERS 6     // Amount of timers being used on the system
 
 struct Timer
 {

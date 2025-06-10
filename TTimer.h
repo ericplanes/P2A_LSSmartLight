@@ -15,6 +15,7 @@
 #define TI_LIGHTS 2
 #define TI_LCD 3
 #define TI_SERIAL 4
+#define TI_HORA 5
 
 void Timer0_ISR(void);
 

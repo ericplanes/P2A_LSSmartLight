@@ -13,7 +13,6 @@
 #define STATE_WAIT_RESET_CONFIRM 5
 
 // Static variables
-static BYTE timer_handle;
 static BYTE keypad_state = STATE_IDLE;
 static BYTE current_key = 12; // 12 = no key pressed
 static BYTE old_key = 12;
@@ -46,9 +45,6 @@ static BYTE is_valid_intensity(BYTE key);
 
 void KEY_Init(void)
 {
-    // Initialize timer
-    TiNewTimer(&timer_handle);
-
     // Initialize keypad hardware
     TRISC = 0x0F; // RC0-RC3 as outputs (rows), RC4-RC7 as inputs
     TRISB = 0xFF; // RB0-RB7 as inputs (columns)
@@ -72,18 +68,18 @@ void KEY_Motor(void)
         scan_keypad();
         if (is_key_pressed())
         {
-            TiResetTics(timer_handle);
+            TiResetTics(TI_KEYPAD);
             keypad_state = STATE_DEBOUNCE_PRESS;
         }
         break;
 
     case STATE_DEBOUNCE_PRESS:
-        if (TiGetTics(timer_handle) >= WAIT_16MS)
+        if (TiGetTics(TI_KEYPAD) >= WAIT_16MS)
         {
             if (is_key_pressed())
             {
                 current_key = convert_to_key();
-                TiResetTics(timer_handle);
+                TiResetTics(TI_KEYPAD);
                 keypad_state = STATE_DEBOUNCE_RELEASE;
             }
             else
@@ -94,7 +90,7 @@ void KEY_Motor(void)
         break;
 
     case STATE_DEBOUNCE_RELEASE:
-        if (TiGetTics(timer_handle) >= WAIT_16MS)
+        if (TiGetTics(TI_KEYPAD) >= WAIT_16MS)
         {
             if (!is_key_pressed())
             {
@@ -103,7 +99,7 @@ void KEY_Motor(void)
             else if (current_key == 11) // '#' key
             {
                 // Start 3-second timer for reset
-                TiResetTics(timer_handle);
+                TiResetTics(TI_KEYPAD);
                 keypad_state = STATE_WAIT_RESET_CONFIRM;
             }
             else
@@ -123,7 +119,7 @@ void KEY_Motor(void)
         scan_keypad();
         if (is_key_pressed())
         {
-            TiResetTics(timer_handle);
+            TiResetTics(TI_KEYPAD);
             keypad_state = STATE_DEBOUNCE_PRESS;
         }
         break;
@@ -133,7 +129,7 @@ void KEY_Motor(void)
         {
             keypad_state = STATE_IDLE;
         }
-        else if (TiGetTics(timer_handle) >= WAIT_3S)
+        else if (TiGetTics(TI_KEYPAD) >= WAIT_3S)
         {
             command_ready = RESET;
             keypad_state = STATE_IDLE;
