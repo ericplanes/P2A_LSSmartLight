@@ -8,10 +8,13 @@
 // Command types returned by KEY_GetCommand()
 #define NO_COMMAND 0
 #define UPDATE_LED 1
-#define RESET 2
+#define KEYPAD_RESET 2
 
 void KEY_Init(void);
 // Post: Initializes keypad hardware and internal state machine
+
+void KEY_Reset(void);
+// Post: Resets keypad state machine to initial conditions without reinitializing hardware
 
 void KEY_Motor(void);
 // Post: Processes keypad scanning, debouncing, and command detection
