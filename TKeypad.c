@@ -54,7 +54,8 @@ static BYTE row_index = 0;
 static BYTE command_ready = NO_COMMAND;
 static BYTE led_number = 0;
 static BYTE led_intensity = 0;
-static BYTE waiting_for_second_key = FALSE;
+static BOOL waiting_for_second_key = FALSE;
+static BOOL user_inside = FALSE;
 
 // Key mapping table: [row][col] -> key_value
 static const BYTE key_table[KEYPAD_ROWS][KEYPAD_COLS] = {
@@ -73,6 +74,7 @@ static BYTE convert_to_key(void);
 static void process_detected_key(BYTE key);
 static BYTE is_valid_led_number(BYTE key);
 static BYTE is_hash_key(BYTE key);
+static void reset_internal_state(void);
 
 /* =======================================
  *          PUBLIC FUNCTION BODIES
@@ -84,32 +86,8 @@ void KEY_Init(void)
     TRISC = TRISC_KEYPAD_CONFIG; // RC0-RC3 as outputs (rows), RC4-RC7 as inputs
     TRISB = TRISB_KEYPAD_CONFIG; // RB0-RB7 as inputs (columns)
 
-    // Initialize state
-    keypad_state = STATE_IDLE;
-    current_key = NO_KEY_PRESSED;
-    old_key = NO_KEY_PRESSED;
-    row_index = 0;
-    command_ready = NO_COMMAND;
-    waiting_for_second_key = FALSE;
-
-    // Start scanning
-    scan_keypad();
-}
-
-void KEY_Reset(void)
-{
-    // Reset all state variables to initial conditions
-    keypad_state = STATE_IDLE;
-    current_key = NO_KEY_PRESSED;
-    old_key = NO_KEY_PRESSED;
-    row_index = 0;
-    command_ready = NO_COMMAND;
-    led_number = 0;
-    led_intensity = 0;
-    waiting_for_second_key = FALSE;
-
-    // Restart scanning from beginning
-    scan_keypad();
+    // Reset internal state
+    reset_internal_state();
 }
 
 void KEY_Motor(void)
@@ -118,7 +96,7 @@ void KEY_Motor(void)
     {
     case STATE_IDLE:
         scan_keypad();
-        if (is_key_pressed())
+        if (is_key_pressed() && user_inside)
         {
             TiResetTics(TI_KEYPAD);
             keypad_state = STATE_DEBOUNCE_PRESS;
@@ -210,6 +188,15 @@ void KEY_GetUpdateInfo(BYTE *led, BYTE *intensity)
     *intensity = led_intensity;
 }
 
+void KEY_SetUserInside(BOOL inside)
+{
+    if (!inside)
+    {
+        reset_internal_state();
+    }
+    user_inside = inside;
+}
+
 /* =======================================
  *          PRIVATE FUNCTION BODIES
  * ======================================= */
@@ -277,4 +264,17 @@ static BYTE is_valid_led_number(BYTE key)
 static BYTE is_hash_key(BYTE key)
 {
     return (key == HASH_KEY);
+}
+
+static void reset_internal_state(void)
+{
+    // Reset all state variables to initial conditions
+    keypad_state = STATE_IDLE;
+    current_key = NO_KEY_PRESSED;
+    old_key = NO_KEY_PRESSED;
+    row_index = 0;
+    command_ready = NO_COMMAND;
+    led_number = 0;
+    led_intensity = 0;
+    waiting_for_second_key = FALSE;
 }

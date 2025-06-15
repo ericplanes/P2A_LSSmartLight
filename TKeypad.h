@@ -13,9 +13,6 @@
 void KEY_Init(void);
 // Post: Initializes keypad hardware and internal state machine
 
-void KEY_Reset(void);
-// Post: Resets keypad state machine to initial conditions without reinitializing hardware
-
 void KEY_Motor(void);
 // Post: Processes keypad scanning, debouncing, and command detection
 
@@ -27,5 +24,9 @@ void KEY_GetUpdateInfo(BYTE *led, BYTE *intensity);
 // Pre: KEY_GetCommand() returned UPDATE_LED
 // Post: Fills led with LED number (0-5) and intensity with intensity value (0-10, where 10='*')
 // Only valid immediately after KEY_GetCommand() returns UPDATE_LED
+
+void KEY_SetUserInside(BOOL inside);
+// Pre: inside is TRUE if user is inside the room, FALSE otherwise
+// Post: if false, the keypad will not respond to any key press
 
 #endif
