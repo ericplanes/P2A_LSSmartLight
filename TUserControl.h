@@ -7,15 +7,15 @@
  *              CONSTANTS
  * ======================================= */
 
-#define UID_SIZE 5 // UID size in bytes
+#define UID_SIZE 5          // UID size in bytes
+#define USER_NOT_FOUND 0xFF // Return value when UID not found
 
 /* =======================================
  *         PUBLIC FUNCTION HEADERS
  * ======================================= */
 
-BOOL USER_FindByRFID(BYTE *rfid_uid, BYTE *user_id, BYTE *user_position);
-// Pre: rfid_uid points to 5-byte UID array, user_id and user_position point to valid BYTE variables
-// Post: If UID found, fills user_id and user_position and returns TRUE
-//       If UID not found, returns FALSE
+BYTE USER_FindPositionByRFID(BYTE *rfid_uid);
+// Pre: rfid_uid points to 5-byte UID array
+// Post: If UID found, returns user position (0-N), else returns USER_NOT_FOUND
 
 #endif

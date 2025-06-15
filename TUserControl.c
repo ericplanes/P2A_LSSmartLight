@@ -7,6 +7,11 @@
 #define NUM_USERS 4 // Number of registered users (exceeds minimum of 3)
 
 /* =======================================
+ *         PRIVATE FUNCTION HEADERS
+ * ======================================= */
+static BOOL is_user_equals(const BYTE *uid1, const BYTE *uid2);
+
+/* =======================================
  *         PRIVATE VARIABLES
  * ======================================= */
 
@@ -17,6 +22,26 @@ static const BYTE accepted_uids[NUM_USERS][UID_SIZE] = {
     {0x33, 0x26, 0x3B, 0x76, 0xC2}, // User 2
     {0x44, 0x37, 0x4C, 0x67, 0xB3}  // User 3
 };
+
+/* =======================================
+ *         PUBLIC FUNCTION BODIES
+ * ======================================= */
+
+BYTE USER_FindPositionByRFID(BYTE *rfid_uid)
+{
+    // Search through all registered users
+    for (BYTE i = 0; i < NUM_USERS; i++)
+    {
+        if (is_user_equals(rfid_uid, accepted_uids[i]))
+        {
+            // UID found - set output parameters
+            return i; // Position in arrays
+        }
+    }
+
+    // UID not found in registered users
+    return USER_NOT_FOUND;
+}
 
 /* =======================================
  *         PRIVATE FUNCTIONS
@@ -38,26 +63,4 @@ static BOOL is_user_equals(const BYTE *uid1, const BYTE *uid2)
     }
 
     return TRUE;
-}
-
-/* =======================================
- *         PUBLIC FUNCTION BODIES
- * ======================================= */
-
-BOOL USER_FindByRFID(BYTE *rfid_uid, BYTE *user_id, BYTE *user_position)
-{
-    // Search through all registered users
-    for (BYTE i = 0; i < NUM_USERS; i++)
-    {
-        if (is_user_equals(rfid_uid, accepted_uids[i]))
-        {
-            // UID found - set output parameters
-            *user_id = i;       // User ID (0-based index)
-            *user_position = i; // Position in arrays (same as user_id)
-            return TRUE;        // Success
-        }
-    }
-
-    // UID not found in registered users
-    return FALSE;
 }
