@@ -166,13 +166,9 @@ void LCD_WriteNoUserInfo(void)
     write_string((const BYTE *)"3-0 4-0 5-0 6-0");
 }
 
-void LCD_WriteUserInfo(BYTE last_uid_char, BYTE hour, BYTE minute, BYTE *light_config)
+void LCD_WriteUserInfo(BYTE last_uid_char, BYTE *light_config)
 {
     BYTE i;
-
-    // Store current time in static variables
-    current_hour = hour;
-    current_minute = minute;
 
     // Clear display
     send_instruction(LCD_CLEAR_DISPLAY);
@@ -185,36 +181,8 @@ void LCD_WriteUserInfo(BYTE last_uid_char, BYTE hour, BYTE minute, BYTE *light_c
     write_character(last_uid_char);
     write_character(' ');
 
-    // Write time (HH:MM format)
-    write_character((hour / 10) + '0');
-    write_character((hour % 10) + '0');
-    write_character(':');
-    write_character((minute / 10) + '0');
-    write_character((minute % 10) + '0');
-    write_character(' ');
-
-    // Write first 3 light configurations on first line
-    for (i = 0; i < 3; i++)
-    {
-        write_character('1' + i);
-        write_character('-');
-        write_character(hex_to_char(light_config[i]));
-        if (i < 2)
-            write_character(' ');
-    }
-
-    // Move to second line
-    set_cursor_position(1, 0);
-
-    // Write last 3 light configurations on second line
-    for (i = 3; i < 6; i++)
-    {
-        write_character('1' + i);
-        write_character('-');
-        write_character(hex_to_char(light_config[i]));
-        if (i < 5)
-            write_character(' ');
-    }
+    // Update light configuration
+    LCD_UpdateLightConfig(light_config);
 }
 
 void LCD_UpdateTime(BYTE hour, BYTE minute)
@@ -236,10 +204,6 @@ void LCD_UpdateTime(BYTE hour, BYTE minute)
 
 void LCD_UpdateLightConfig(BYTE *light_config)
 {
-    // Update lights according to display format:
-    // Line 0: "F 16:30 1-X 2-Y"  (positions 10, 14)
-    // Line 1: "3-Z 4-W 5-V 6-U"  (positions 2, 6, 10, 14)
-
     // Light 1 and 2 on first line
     set_cursor_position(0, 10); // "1-X" - position of X
     write_character(hex_to_char(light_config[0]));
