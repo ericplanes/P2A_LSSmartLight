@@ -2,6 +2,14 @@
 #include <pic18f4321.h>
 
 #include "Utils.h"
+#include "TTimer.h"
+#include "TEEPROM.h"
+#include "TLCD.h"
+#include "TKeypad.h"
+#include "THora.h"
+#include "TSerial.h"
+#include "TLight.h"
+#include "TUserControl.h"
 
 // Configuration bits
 #pragma config OSC = INTIO2
@@ -16,41 +24,44 @@
 void main(void);
 
 /* =======================================
+ *               INTERRUPTS
+ * ======================================= */
+#ifdef __XC8
+void __interrupt() RSI_High(void)
+#else
+void RSI_High(void) // For IntelliSense only
+#endif
+{
+    if (INTCONbits.TMR0IF == 1)
+    {
+        Timer0_ISR();
+    }
+}
+
+/* =======================================
  *               MAIN
  * ======================================= */
-
-/*
-void __interrupt() RSI_High(void)
-{
-    // Interrupt service routine
-    // TODO: Add interrupt handling for smart light functionality
-}
-//*/
-
 void main(void)
 {
-    // Set internal oscillator to 8 MHz
-    OSCCONbits.IRCF = 0b111; // IRCF = 111: 8 MHz
-    OSCTUNEbits.PLLEN = 1;   // Enable 4x PLL => 32 MHz
-    OSCCONbits.SCS = 0b00;   // Use clock defined by CONFIG
+    // Initialize all modules in proper order
+    TiInit();      // Timer system (must be first)
+    SIO_Init();    // Serial communication
+    LED_Init();    // PWM light control
+    EEPROM_Init(); // EEPROM storage
+    LCD_Init();    // LCD display
+    KEY_Init();    // Keypad input
+    HORA_Init();   // Time management
 
-    // TODO: Initialize smart light subsystems
-    // Examples:
-    // LED_Init();
-    // PWM_Init();
-    // SensorInput_Init();
-    // Communication_Init();
-
+    // Main cooperative loop
     while (TRUE)
     {
-        // Main loop for smart light functionality
-        // TODO: Add smart light motor functions
-        // Examples:
-        // LightControl_Motor();
-        // SensorInput_Motor();
-        // Communication_Motor();
+        // Run all module motors
+        LED_Motor();  // Update PWM light control
+        KEY_Motor();  // Process keypad input
+        HORA_Motor(); // Update time management
 
-        // Placeholder for now
-        __delay_ms(100);
+        // Additional motors can be added here when RFID and Controller modules are ready
+        // RFID_Motor();
+        // CONTROLLER_Motor();
     }
 }
