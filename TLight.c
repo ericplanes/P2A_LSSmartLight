@@ -136,5 +136,6 @@ static void configure_led_as_output(volatile BYTE *tris_reg, BYTE pin)
 
 static void set_led_state(BOOL state, volatile BYTE *port_reg, BYTE pin)
 {
-    *port_reg = state == LED_ON ? (*port_reg | (1 << pin)) : (*port_reg & ~(1 << pin));
+    // ~ is bitwise NOT, to only modify the specific pin from the port
+    *port_reg = state == LED_ON ? (BYTE)(*port_reg | (1 << pin)) : (BYTE)(*port_reg & ~(1 << pin));
 }
