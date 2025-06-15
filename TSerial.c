@@ -65,7 +65,7 @@ void SIO_TEST_SendString(BYTE *string)
     send_string(string);
 }
 
-BYTE SIO_ReadChar(void)
+BYTE SIO_ReadCommand(void)
 {
     if (!PIR1bits.RC1IF)
         return CMD_NO_COMMAND;
