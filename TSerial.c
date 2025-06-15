@@ -30,6 +30,7 @@ static const BYTE msg_crlf[] = "\r\n";
  *        PRIVATE FUNCTION HEADERS
  * ======================================= */
 
+static BOOL send_char(BYTE character);
 static void send_string(BYTE *string);
 
 /* =======================================
@@ -51,13 +52,67 @@ void SIO_Init(void)
     RCSTAbits.CREN = 1;
 }
 
-BOOL SIO_SendChar(BYTE character)
+BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
 {
-    if (!PIR1bits.TXIF)
+    static BYTE state = 0; // 0: waiting for first hour digit, 1: waiting for second hour digit, 2: waiting for first min digit, 3: waiting for second min digit
+    static BYTE hour_chars[2], min_chars[2];
+    static BYTE hour_idx = 0, min_idx = 0;
+
+    if (!PIR1bits.RC1IF)
         return FALSE;
 
-    TXREG = character;
-    return TRUE;
+    BYTE received_char = RCREG;
+
+    switch (state)
+    {
+    case 0: // First hour digit
+        if (received_char >= '0' && received_char <= '9')
+        {
+            hour_chars[0] = received_char;
+            state = 1;
+        }
+        break;
+
+    case 1: // Second hour digit
+        if (received_char >= '0' && received_char <= '9')
+        {
+            hour_chars[1] = received_char;
+            *hour = (hour_chars[0] - '0') * 10 + (hour_chars[1] - '0');
+            // Send confirmation ":"
+            while (!send_char(':'))
+                ;
+            state = 2;
+        }
+        break;
+
+    case 2: // First minute digit
+        if (received_char >= '0' && received_char <= '9')
+        {
+            min_chars[0] = received_char;
+            state = 3;
+        }
+        break;
+
+    case 3: // Second minute digit
+        if (received_char >= '0' && received_char <= '9')
+        {
+            min_chars[1] = received_char;
+            *mins = (min_chars[0] - '0') * 10 + (min_chars[1] - '0');
+            // Send confirmation "\r\n"
+            while (!send_char('\r'))
+                ;
+            while (!send_char('\n'))
+                ;
+            // Reset state for next time
+            state = 0;
+            hour_idx = 0;
+            min_idx = 0;
+            return TRUE;
+        }
+        break;
+    }
+
+    return FALSE;
 }
 
 void SIO_TEST_SendString(BYTE *string)
@@ -102,17 +157,17 @@ void SIO_SendDetectedCard(BYTE *UID, BYTE *config)
 
     // Send config line
     send_string((BYTE *)msg_config_prefix);
-    SIO_SendChar(config[0] + '0');
+    send_char(config[0] + '0');
 
     for (i = 1; i < 6; i++)
     {
         send_string((BYTE *)msg_separator);
-        SIO_SendChar(i + '0');
+        send_char(i + '0');
         send_string((BYTE *)msg_colon);
         if (config[i] == 10)
-            SIO_SendChar('A');
+            send_char('A');
         else
-            SIO_SendChar(config[i] + '0');
+            send_char(config[i] + '0');
     }
     send_string((BYTE *)msg_crlf);
 }
@@ -142,17 +197,17 @@ void SIO_SendStoredConfig(BYTE *UID, BYTE *config)
     send_string(UID);
     send_string((BYTE *)msg_arrow);
     send_string((BYTE *)msg_config_prefix);
-    SIO_SendChar(config[0] + '0');
+    send_char(config[0] + '0');
 
     for (i = 1; i < 6; i++)
     {
         send_string((BYTE *)msg_separator);
-        SIO_SendChar(i + '0');
+        send_char(i + '0');
         send_string((BYTE *)msg_colon);
         if (config[i] == 10)
-            SIO_SendChar('A');
+            send_char('A');
         else
-            SIO_SendChar(config[i] + '0');
+            send_char(config[i] + '0');
     }
     send_string((BYTE *)msg_crlf);
 }
@@ -173,12 +228,21 @@ void SIO_SendUnknownCard(BYTE *UID)
  *        PRIVATE FUNCTION BODIES
  * ======================================= */
 
+static BOOL send_char(BYTE character)
+{
+    if (!PIR1bits.TXIF)
+        return FALSE;
+
+    TXREG = character;
+    return TRUE;
+}
+
 static void send_string(BYTE *string)
 {
     BYTE i = 0;
     while (string[i] != '\0')
     {
-        while (!SIO_SendChar(string[i]))
+        while (!send_char(string[i]))
             ;
         i++;
     }

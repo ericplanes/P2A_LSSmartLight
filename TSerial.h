@@ -30,13 +30,13 @@ void SIO_Init(void);
 // Post: Initializes serial communication hardware
 
 // Basic communication
-BOOL SIO_SendChar(BYTE character);
-// Pre: Serial hardware is initialized
-// Post: Returns TRUE if character sent successfully, FALSE otherwise
-
 BYTE SIO_ReadCommand(void);
 // Pre: Serial hardware is initialized
 // Post: Returns received command defined in the dictionary from serial buffer
+
+BOOL SIO_ReadTime(BYTE *hour, BYTE *mins);
+// Pre: Serial hardware is initialized, hour and mins point to valid BYTE variables
+// Post: Returns FALSE until both hour and mins are filled; reads HH:MM format from serial
 
 // Specific message functions
 void SIO_SendDetectedCard(BYTE *UID, BYTE *config);
