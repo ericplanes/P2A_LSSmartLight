@@ -1,10 +1,9 @@
 #ifndef THORA_H
 #define THORA_H
 
-#include "Utils.h"
-#include "TTimer.h"
 #include <xc.h>
 #include <pic18f4321.h>
+#include "Utils.h"
 
 void HORA_Init(void);
 // Post: Initializes hour and minutes to 0 and resets motor state

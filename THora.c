@@ -1,4 +1,6 @@
 #include "THora.h"
+#include "TTimer.h"
+#include "TLCD.h"
 
 // Static variables for time keeping
 static BYTE current_hour = 0;    // 0-99 hours
@@ -41,6 +43,7 @@ void HORA_Motor(void)
                 current_hour = 0;
             }
         }
+        LCD_UpdateTime(current_hour, current_minutes);
     }
 }
 
