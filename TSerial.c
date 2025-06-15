@@ -106,7 +106,6 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
         {
             min_chars[1] = received_char;
             *mins = (min_chars[0] - '0') * 10 + (min_chars[1] - '0');
-            // Send confirmation "\r\n"
             send_string((BYTE *)msg_crlf);
 
             // Reset state for next time

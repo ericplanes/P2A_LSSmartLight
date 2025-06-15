@@ -8,4 +8,6 @@
 #define BYTE unsigned char
 #define WORD unsigned short
 
+#define USER_NOT_FOUND 0xFF
+
 #endif
