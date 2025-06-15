@@ -7,6 +7,9 @@
 #include "TLCD.h"
 #include "TKeypad.h"
 #include "THora.h"
+#include "TSerial.h"
+#include "TLight.h"
+#include "TUserControl.h"
 
 // Configuration bits
 #pragma config OSC = INTIO2
@@ -40,18 +43,25 @@ void RSI_High(void) // For IntelliSense only
  * ======================================= */
 void main(void)
 {
-    // Initialize all modules
-    TiInit();
-    EEPROM_Init();
-    LCD_Init();
-    KEY_Init();
-    HORA_Init();
+    // Initialize all modules in proper order
+    TiInit();      // Timer system (must be first)
+    SIO_Init();    // Serial communication
+    LED_Init();    // PWM light control
+    EEPROM_Init(); // EEPROM storage
+    LCD_Init();    // LCD display
+    KEY_Init();    // Keypad input
+    HORA_Init();   // Time management
 
     // Main cooperative loop
     while (TRUE)
     {
         // Run all module motors
-        KEY_Motor();
-        HORA_Motor();
+        LED_Motor();  // Update PWM light control
+        KEY_Motor();  // Process keypad input
+        HORA_Motor(); // Update time management
+
+        // Additional motors can be added here when RFID and Controller modules are ready
+        // RFID_Motor();
+        // CONTROLLER_Motor();
     }
 }
