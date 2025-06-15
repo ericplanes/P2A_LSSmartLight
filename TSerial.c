@@ -1,6 +1,16 @@
 #include "TSerial.h"
 
 /* =======================================
+ *         PRIVATE CONSTANTS
+ * ======================================= */
+
+// SIO_ReadTime state machine states
+#define TIME_STATE_HOUR_FIRST 0
+#define TIME_STATE_HOUR_SECOND 1
+#define TIME_STATE_MIN_FIRST 2
+#define TIME_STATE_MIN_SECOND 3
+
+/* =======================================
  *         PRIVATE VARIABLES
  * ======================================= */
 
@@ -54,9 +64,8 @@ void SIO_Init(void)
 
 BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
 {
-    static BYTE state = 0; // 0: waiting for first hour digit, 1: waiting for second hour digit, 2: waiting for first min digit, 3: waiting for second min digit
+    static BYTE state = TIME_STATE_HOUR_FIRST;
     static BYTE hour_chars[2], min_chars[2];
-    static BYTE hour_idx = 0, min_idx = 0;
 
     if (!PIR1bits.RC1IF)
         return FALSE;
@@ -65,48 +74,43 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
 
     switch (state)
     {
-    case 0: // First hour digit
+    case TIME_STATE_HOUR_FIRST: // First hour digit
         if (received_char >= '0' && received_char <= '9')
         {
             hour_chars[0] = received_char;
-            state = 1;
+            state = TIME_STATE_HOUR_SECOND;
         }
         break;
 
-    case 1: // Second hour digit
+    case TIME_STATE_HOUR_SECOND: // Second hour digit
         if (received_char >= '0' && received_char <= '9')
         {
             hour_chars[1] = received_char;
             *hour = (hour_chars[0] - '0') * 10 + (hour_chars[1] - '0');
-            // Send confirmation ":"
             while (!send_char(':'))
                 ;
-            state = 2;
+            state = TIME_STATE_MIN_FIRST;
         }
         break;
 
-    case 2: // First minute digit
+    case TIME_STATE_MIN_FIRST: // First minute digit
         if (received_char >= '0' && received_char <= '9')
         {
             min_chars[0] = received_char;
-            state = 3;
+            state = TIME_STATE_MIN_SECOND;
         }
         break;
 
-    case 3: // Second minute digit
+    case TIME_STATE_MIN_SECOND: // Second minute digit
         if (received_char >= '0' && received_char <= '9')
         {
             min_chars[1] = received_char;
             *mins = (min_chars[0] - '0') * 10 + (min_chars[1] - '0');
             // Send confirmation "\r\n"
-            while (!send_char('\r'))
-                ;
-            while (!send_char('\n'))
-                ;
+            send_string((BYTE *)msg_crlf);
+
             // Reset state for next time
-            state = 0;
-            hour_idx = 0;
-            min_idx = 0;
+            state = TIME_STATE_HOUR_FIRST;
             return TRUE;
         }
         break;
@@ -147,6 +151,9 @@ void SIO_SendDetectedCard(BYTE *UID, BYTE *config)
 {
     BYTE i;
 
+    // Ensure new line
+    send_string((BYTE *)msg_crlf);
+
     // Send "Card detected!"
     send_string((BYTE *)msg_detected_card);
 
@@ -174,11 +181,17 @@ void SIO_SendDetectedCard(BYTE *UID, BYTE *config)
 
 void SIO_SendMainMenu(void)
 {
+    // Ensure new line
+    send_string((BYTE *)msg_crlf);
+
     send_string((BYTE *)msg_main_menu);
 }
 
 void SIO_SendUser(BYTE *User)
 {
+    // Ensure new line
+    send_string((BYTE *)msg_crlf);
+
     send_string((BYTE *)msg_current_user);
     send_string(User);
     send_string((BYTE *)msg_crlf);
@@ -186,12 +199,18 @@ void SIO_SendUser(BYTE *User)
 
 void SIO_SendNoUser(void)
 {
+    // Ensure new line
+    send_string((BYTE *)msg_crlf);
+
     send_string((BYTE *)msg_no_user);
 }
 
 void SIO_SendStoredConfig(BYTE *UID, BYTE *config)
 {
     BYTE i;
+
+    // Ensure new line
+    send_string((BYTE *)msg_crlf);
 
     send_string((BYTE *)msg_uid_prefix);
     send_string(UID);
@@ -214,11 +233,17 @@ void SIO_SendStoredConfig(BYTE *UID, BYTE *config)
 
 void SIO_SendTimePrompt(void)
 {
+    // Ensure new line
+    send_string((BYTE *)msg_crlf);
+
     send_string((BYTE *)msg_time_prompt);
 }
 
 void SIO_SendUnknownCard(BYTE *UID)
 {
+    // Ensure new line
+    send_string((BYTE *)msg_crlf);
+
     send_string((BYTE *)msg_unknown_card);
     send_string(UID);
     send_string((BYTE *)msg_unknown_ignored);
