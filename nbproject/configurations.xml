@@ -8,9 +8,11 @@
       <itemPath>THora.h</itemPath>
       <itemPath>TKeypad.h</itemPath>
       <itemPath>TLCD.h</itemPath>
+      <itemPath>TLight.h</itemPath>
       <itemPath>TRFID.h</itemPath>
       <itemPath>TSerial.h</itemPath>
       <itemPath>TTimer.h</itemPath>
+      <itemPath>TUserControl.h</itemPath>
       <itemPath>Utils.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
@@ -30,8 +32,10 @@
       <itemPath>THora.c</itemPath>
       <itemPath>TKeypad.c</itemPath>
       <itemPath>TLCD.c</itemPath>
+      <itemPath>TLight.c</itemPath>
       <itemPath>TSerial.c</itemPath>
       <itemPath>TTimer.c</itemPath>
+      <itemPath>TUserControl.c</itemPath>
     </logicalFolder>
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>
