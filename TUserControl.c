@@ -1,12 +1,6 @@
 #include "TUserControl.h"
 
 /* =======================================
- *              CONSTANTS
- * ======================================= */
-
-#define NUM_USERS 4 // Number of registered users (exceeds minimum of 3)
-
-/* =======================================
  *         PRIVATE FUNCTION HEADERS
  * ======================================= */
 static BOOL is_user_equals(const BYTE *uid1, const BYTE *uid2);
@@ -43,6 +37,15 @@ BYTE USER_FindPositionByRFID(BYTE *rfid_uid)
     return USER_NOT_FOUND;
 }
 
+BYTE USER_GetUserByPosition(BYTE position)
+{
+    if (position < NUM_USERS)
+    {
+        return accepted_uids[position];
+    }
+    return USER_NOT_FOUND;
+}
+
 /* =======================================
  *         PRIVATE FUNCTIONS
  * ======================================= */
@@ -61,6 +64,5 @@ static BOOL is_user_equals(const BYTE *uid1, const BYTE *uid2)
             return FALSE; // Early exit - UIDs don't match
         }
     }
-
     return TRUE;
 }
