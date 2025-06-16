@@ -1,356 +1,523 @@
-/*
- * File:   TRFID.c
- * Author: jnavarro & ester.vidana
- *
- *
- * Inspired by: https://simplesoftmx.blogspot.com/2014/11/libreria-para-usar-lector-rfid-rc522.html
- */
-
 #include "TRFID.h"
 
-//-------------- Private functions: --------------
-void InitPortDirections()
+/* =======================================
+ *              CONSTANTS
+ * ======================================= */
+
+// Motor states
+#define STATE_RFID_INIT 0
+#define STATE_RFID_WAIT_IRQ 1
+#define STATE_RFID_CHECK_RESPONSE 2
+#define STATE_RFID_READ_CARD 3
+#define STATE_RFID_CONFIG_FRAME 4
+#define STATE_RFID_CONFIG_IRQ 5
+#define STATE_RFID_CLEAR_IRQ 6
+#define STATE_RFID_SET_IDLE 7
+#define STATE_RFID_SEND_REQ 8
+#define STATE_RFID_START_TRANSCEIVE 9
+#define STATE_RFID_START_SEND 10
+#define STATE_RFID_CHECK_STATUS 11
+#define STATE_RFID_READ_FIFO_LEVEL 12
+#define STATE_RFID_CALC_BITS 13
+#define STATE_RFID_CHECK_SIZE 14
+#define STATE_RFID_READ_FIFO 15
+#define STATE_RFID_PROCESS_DATA 16
+#define STATE_RFID_WAIT_TIMEOUT 17
+
+// SPI communication timing
+#define SPI_BITS_PER_BYTE 8
+#define SPI_READ_MASK 0x80  // MSB=1 for read operations
+#define SPI_WRITE_MASK 0x7E // Address mask for write operations
+#define SPI_ADDRESS_SHIFT 1 // Left shift for address
+
+// MFRC522 communication timeouts and thresholds
+#define TIMEOUT_MAX_RETRIES 0xFFFF
+#define IRQ_TIMEOUT_RETRIES 0x0F
+#define ANTICOLL_TIMEOUT_RETRIES 0xFF
+#define CARD_DETECTION_DELAY_MS 500
+
+// FIFO and data handling
+#define FIFO_MAX_SIZE 16
+#define MIN_FIFO_SIZE 1
+#define UID_BYTES_COUNT 4
+#define UID_WITH_CHECKSUM_SIZE 5
+
+// Error checking masks
+#define ERROR_REGISTER_MASK 0x1B    // Bits 0,1,3,4 of ErrorReg
+#define IRQ_CHECK_MASK_01 0x01      // Bit 0 of IRQ register
+#define IRQ_CHECK_MASK_30 0x30      // Bits 4,5 of IRQ register
+#define CONTROL_LAST_BITS_MASK 0x07 // Last 3 bits of ControlReg
+
+// Antenna and RF configuration
+#define ANTENNA_ENABLE_MASK 0x03 // Enable TX1 and TX2
+#define CRC_IRQ_BIT_MASK 0x04    // CRC interrupt bit
+
+/* =======================================
+ *         PRIVATE VARIABLES
+ * ======================================= */
+
+static BYTE current_rfid_state;
+static BYTE communication_status;
+static WORD rfid_timer_handle;
+static BOOL user_card_detected;
+static BYTE stored_user_uid[RFID_UID_SIZE];
+static BYTE uid_transfer_position;
+
+/* =======================================
+ *       PRIVATE FUNCTION HEADERS
+ * ======================================= */
+
+static void configure_rfid_pins(void);
+static BYTE read_mfrc522_register(BYTE register_address);
+static void write_mfrc522_register(BYTE register_address, BYTE register_value);
+static void clear_register_bits(BYTE register_address, BYTE bit_mask);
+static void set_register_bits(BYTE register_address, BYTE bit_mask);
+static void reset_mfrc522_chip(void);
+static void enable_antenna(void);
+static void disable_antenna(void);
+static void initialize_mfrc522_chip(void);
+static BYTE communicate_with_card(BYTE command, BYTE *send_data, BYTE send_length, BYTE *receive_data, WORD *receive_length);
+static void calculate_crc_checksum(BYTE *input_data, BYTE data_length, BYTE *crc_output);
+static BYTE perform_anticollision(BYTE *serial_number);
+static BYTE read_card_serial_number(BYTE *uid_string);
+static void halt_card_communication(void);
+static void store_detected_uid(BYTE *detected_uid);
+
+/* =======================================
+ *         PUBLIC FUNCTION BODIES
+ * ======================================= */
+
+void RFID_Init(void)
 {
-  DIR_MFRC522_SO = 1;
-  DIR_MFRC522_SI = 0;
-  DIR_MFRC522_SCK = 0;
-  DIR_MFRC522_CS = 0;
-  DIR_MFRC522_RST = 0;
+  configure_rfid_pins();
+  initialize_mfrc522_chip();
+  current_rfid_state = STATE_RFID_INIT;
+  user_card_detected = FALSE;
+  uid_transfer_position = 0;
+  TI_NewTimer(&rfid_timer_handle);
+  TI_ResetTics(rfid_timer_handle);
 }
 
-void delay_us(char howMany)
+void RFID_Motor(void)
 {
-#define NUM_US 16 // Number of instructions in 1 uS
-  char x;
-  for (x = 0; x < howMany * NUM_US; x++)
-    Nop();
-}
+  BYTE detected_uid[UID_WITH_CHECKSUM_SIZE];
+  static BYTE irq_retry_counter;
+  BYTE irq_register_value, last_received_bits;
+  WORD calculated_back_bits;
 
-unsigned char MFRC522_Rd(unsigned char Address)
-{
-  unsigned int i, ucAddr;
-  unsigned int ucResult = 0;
-  MFRC522_SCK = 0;
-  MFRC522_CS = 0;
-  ucAddr = ((Address << 1) & 0x7E) | 0x80;
-
-  for (i = 8; i > 0; i--)
+  switch (current_rfid_state)
   {
-    MFRC522_SI = ((ucAddr & 0x80) == 0x80);
-    MFRC522_SCK = 1;
-    // delay_us(5);
-
-    ucAddr <<= 1;
-    MFRC522_SCK = 0;
-    // delay_us(5);
-  }
-
-  for (i = 8; i > 0; i--)
-  {
-    MFRC522_SCK = 1;
-    // delay_us(5);
-    ucResult <<= 1;
-    ucResult |= MFRC522_SO;
-    MFRC522_SCK = 0;
-    // delay_us(5);
-  }
-
-  MFRC522_CS = 1;
-  MFRC522_SCK = 1;
-  return ucResult;
-}
-
-void MFRC522_Wr(unsigned char Address, unsigned char value)
-{
-
-  unsigned char i, ucAddr;
-  MFRC522_SCK = 0;
-  MFRC522_CS = 0;
-  ucAddr = ((Address << 1) & 0x7E);
-  for (i = 8; i > 0; i--)
-  {
-    MFRC522_SI = ((ucAddr & 0x80) == 0x80);
-    MFRC522_SCK = 1;
-    ucAddr <<= 1;
-    delay_us(5);
-    MFRC522_SCK = 0;
-    delay_us(5);
-  }
-
-  for (i = 8; i > 0; i--)
-  {
-    MFRC522_SI = ((value & 0x80) == 0x80);
-    MFRC522_SCK = 1;
-    value <<= 1;
-    delay_us(5);
-    MFRC522_SCK = 0;
-    delay_us(5);
-  }
-
-  MFRC522_CS = 1;
-  MFRC522_SCK = 1;
-}
-
-void MFRC522_Clear_Bit(char addr, char mask)
-{
-  unsigned char tmp = 0x0;
-  tmp = MFRC522_Rd(addr);
-  MFRC522_Wr(addr, tmp & ~mask);
-}
-void MFRC522_Set_Bit(char addr, char mask)
-{
-  unsigned char tmp = 0x0;
-  tmp = MFRC522_Rd(addr);
-  MFRC522_Wr(addr, tmp | mask);
-}
-void MFRC522_Reset()
-{
-  MFRC522_RST = 1;
-  delay_us(1);
-  MFRC522_RST = 0;
-  delay_us(1);
-  MFRC522_RST = 1;
-  delay_us(1);
-  MFRC522_Wr(COMMANDREG, PCD_RESETPHASE);
-  delay_us(1);
-}
-
-void MFRC522_AntennaOn()
-{
-  unsigned char stt;
-  stt = MFRC522_Rd(TXCONTROLREG);
-  MFRC522_Set_Bit(TXCONTROLREG, 0x03);
-}
-void MFRC522_AntennaOff()
-{
-  MFRC522_Clear_Bit(TXCONTROLREG, 0x03);
-}
-void MFRC522_Init()
-{
-  MFRC522_CS = 1;
-  MFRC522_RST = 1;
-
-  MFRC522_Reset();
-  MFRC522_Wr(TMODEREG, 0x8D);      // Tauto=1; f(Timer) = 6.78MHz/TPreScaler
-  MFRC522_Wr(TPRESCALERREG, 0x3E); // TModeReg[3..0] + TPrescalerReg
-  MFRC522_Wr(TRELOADREGL, 30);
-  MFRC522_Wr(TRELOADREGH, 0);
-  MFRC522_Wr(TXAUTOREG, 0x40); // 100%ASK
-  MFRC522_Wr(MODEREG, 0x3D);   // CRC valor inicial de 0x6363
-
-  MFRC522_AntennaOff();
-  MFRC522_AntennaOn();
-}
-
-char MFRC522_ToCard(char command, char *sendData, char sendLen, char *backData, unsigned *backLen)
-{
-  char _status = MI_ERR;
-  char irqEn = 0x00;
-  char waitIRq = 0x00;
-  char lastBits;
-  char n;
-  unsigned i;
-
-  switch (command)
-  {
-  case PCD_AUTHENT: // Certification cards close
-  {
-    irqEn = 0x12;
-    waitIRq = 0x10;
+  case STATE_RFID_INIT:
+    irq_retry_counter = IRQ_TIMEOUT_RETRIES;
+    current_rfid_state = STATE_RFID_CONFIG_FRAME;
     break;
-  }
-  case PCD_TRANSCEIVE: // Transmit FIFO data
-  {
-    irqEn = 0x77;
-    waitIRq = 0x30;
+
+  case STATE_RFID_CONFIG_FRAME:
+    write_mfrc522_register(BITFRAMINGREG, 0x07);
+    current_rfid_state = STATE_RFID_CONFIG_IRQ;
     break;
-  }
+
+  case STATE_RFID_CONFIG_IRQ:
+    write_mfrc522_register(COMMIENREG, 0x77 | 0x80);
+    current_rfid_state = STATE_RFID_CLEAR_IRQ;
+    break;
+
+  case STATE_RFID_CLEAR_IRQ:
+    clear_register_bits(COMMIRQREG, 0x80);
+    set_register_bits(FIFOLEVELREG, 0x80);
+    current_rfid_state = STATE_RFID_SET_IDLE;
+    break;
+
+  case STATE_RFID_SET_IDLE:
+    write_mfrc522_register(COMMANDREG, PCD_IDLE);
+    current_rfid_state = STATE_RFID_SEND_REQ;
+    break;
+
+  case STATE_RFID_SEND_REQ:
+    write_mfrc522_register(FIFODATAREG, PICC_REQIDL);
+    current_rfid_state = STATE_RFID_START_TRANSCEIVE;
+    break;
+
+  case STATE_RFID_START_TRANSCEIVE:
+    write_mfrc522_register(COMMANDREG, PCD_TRANSCEIVE);
+    current_rfid_state = STATE_RFID_START_SEND;
+    break;
+
+  case STATE_RFID_START_SEND:
+    set_register_bits(BITFRAMINGREG, 0x80);
+    current_rfid_state = STATE_RFID_WAIT_IRQ;
+    break;
+
+  case STATE_RFID_WAIT_IRQ:
+    irq_register_value = read_mfrc522_register(COMMIRQREG);
+    if (irq_retry_counter && !(irq_register_value & IRQ_CHECK_MASK_01) && !(irq_register_value & IRQ_CHECK_MASK_30))
+      irq_retry_counter--;
+    else
+      current_rfid_state = STATE_RFID_CHECK_RESPONSE;
+    break;
+
+  case STATE_RFID_CHECK_RESPONSE:
+    clear_register_bits(BITFRAMINGREG, 0x80);
+    if (irq_retry_counter != 0 && !(read_mfrc522_register(ERRORREG) & ERROR_REGISTER_MASK))
+      current_rfid_state = STATE_RFID_CHECK_STATUS;
+    else
+      current_rfid_state = STATE_RFID_INIT;
+    break;
+
+  case STATE_RFID_CHECK_STATUS:
+    communication_status = MI_OK;
+    if (irq_register_value & 0x77 & IRQ_CHECK_MASK_01)
+      communication_status = MI_NOTAGERR;
+    current_rfid_state = STATE_RFID_READ_FIFO_LEVEL;
+    break;
+
+  case STATE_RFID_READ_FIFO_LEVEL:
+    irq_register_value = read_mfrc522_register(FIFOLEVELREG);
+    current_rfid_state = STATE_RFID_CALC_BITS;
+    break;
+
+  case STATE_RFID_CALC_BITS:
+    last_received_bits = read_mfrc522_register(CONTROLREG) & CONTROL_LAST_BITS_MASK;
+    calculated_back_bits = last_received_bits ? ((irq_register_value - 1) * SPI_BITS_PER_BYTE + last_received_bits) : (irq_register_value * SPI_BITS_PER_BYTE);
+    current_rfid_state = STATE_RFID_CHECK_SIZE;
+    break;
+
+  case STATE_RFID_CHECK_SIZE:
+    if (irq_register_value == 0)
+      irq_register_value = MIN_FIFO_SIZE;
+    else if (irq_register_value > FIFO_MAX_SIZE)
+      irq_register_value = FIFO_MAX_SIZE;
+    current_rfid_state = STATE_RFID_READ_FIFO;
+    break;
+
+  case STATE_RFID_READ_FIFO:
+    (void)read_mfrc522_register(FIFODATAREG);
+    current_rfid_state = STATE_RFID_PROCESS_DATA;
+    break;
+
+  case STATE_RFID_PROCESS_DATA:
+    current_rfid_state = STATE_RFID_READ_CARD;
+    break;
+
+  case STATE_RFID_READ_CARD:
+    if (read_card_serial_number(detected_uid))
+    {
+      store_detected_uid(detected_uid);
+    }
+    halt_card_communication();
+    TI_ResetTics(rfid_timer_handle);
+    current_rfid_state = STATE_RFID_WAIT_TIMEOUT;
+    break;
+
+  case STATE_RFID_WAIT_TIMEOUT:
+    if (TI_GetTics(rfid_timer_handle) >= CARD_DETECTION_DELAY_MS)
+      current_rfid_state = STATE_RFID_INIT;
+    break;
+
   default:
+    current_rfid_state = STATE_RFID_INIT;
     break;
   }
-  MFRC522_Wr(COMMIENREG, irqEn | 0x80); // Interrupt request
-  MFRC522_Clear_Bit(COMMIRQREG, 0x80);  // Clear all interrupt request bit
-  MFRC522_Set_Bit(FIFOLEVELREG, 0x80);  // FlushBuffer=1, FIFO Initialization
-  MFRC522_Wr(COMMANDREG, PCD_IDLE);     // NO action; Cancel the current command???
+}
 
-  for (i = 0; i < sendLen; i++)
-    MFRC522_Wr(FIFODATAREG, sendData[i]);
+BOOL RFID_HasReadUser(void)
+{
+  return user_card_detected;
+}
 
-  MFRC522_Wr(COMMANDREG, command);
+BOOL RFID_GetReadUserId(BYTE *user_uid_buffer)
+{
+  if (!user_card_detected)
+    return FALSE;
+
+  if (uid_transfer_position < RFID_UID_SIZE)
+  {
+    user_uid_buffer[uid_transfer_position] = stored_user_uid[uid_transfer_position];
+    uid_transfer_position++;
+    return FALSE;
+  }
+  else
+  {
+    // Transfer complete, reset flags for next reading
+    user_card_detected = FALSE;
+    uid_transfer_position = 0;
+    return TRUE;
+  }
+}
+
+/* =======================================
+ *        PRIVATE FUNCTION BODIES
+ * ======================================= */
+
+static void configure_rfid_pins(void)
+{
+  DIR_MFRC522_SO = 1;  // Input (MISO)
+  DIR_MFRC522_SI = 0;  // Output (MOSI)
+  DIR_MFRC522_SCK = 0; // Output (SCK)
+  DIR_MFRC522_CS = 0;  // Output (CS)
+  DIR_MFRC522_RST = 0; // Output (RST)
+}
+
+static BYTE read_mfrc522_register(BYTE register_address)
+{
+  BYTE bit_counter, read_result = 0;
+  BYTE spi_address = ((register_address << SPI_ADDRESS_SHIFT) & SPI_WRITE_MASK) | SPI_READ_MASK;
+
+  MFRC522_SCK = 0;
+  MFRC522_CS = 0;
+
+  // Send address byte
+  for (bit_counter = 0; bit_counter < SPI_BITS_PER_BYTE; bit_counter++)
+  {
+    MFRC522_SI = (spi_address & 0x80) ? 1 : 0;
+    MFRC522_SCK = 1;
+    spi_address <<= 1;
+    MFRC522_SCK = 0;
+  }
+
+  // Read data byte
+  for (bit_counter = 0; bit_counter < SPI_BITS_PER_BYTE; bit_counter++)
+  {
+    MFRC522_SCK = 1;
+    read_result = (read_result << 1) | (MFRC522_SO ? 1 : 0);
+    MFRC522_SCK = 0;
+  }
+
+  MFRC522_CS = 1;
+  MFRC522_SCK = 1;
+  return read_result;
+}
+
+static void write_mfrc522_register(BYTE register_address, BYTE register_value)
+{
+  BYTE bit_counter;
+  BYTE spi_address = ((register_address << SPI_ADDRESS_SHIFT) & SPI_WRITE_MASK);
+
+  MFRC522_SCK = 0;
+  MFRC522_CS = 0;
+
+  // Send address byte
+  for (bit_counter = 0; bit_counter < SPI_BITS_PER_BYTE; bit_counter++)
+  {
+    MFRC522_SI = (spi_address & 0x80) ? 1 : 0;
+    MFRC522_SCK = 1;
+    spi_address <<= 1;
+    MFRC522_SCK = 0;
+  }
+
+  // Send data byte
+  for (bit_counter = 0; bit_counter < SPI_BITS_PER_BYTE; bit_counter++)
+  {
+    MFRC522_SI = (register_value & 0x80) ? 1 : 0;
+    MFRC522_SCK = 1;
+    register_value <<= 1;
+    MFRC522_SCK = 0;
+  }
+
+  MFRC522_CS = 1;
+  MFRC522_SCK = 1;
+}
+
+static void clear_register_bits(BYTE register_address, BYTE bit_mask)
+{
+  BYTE current_register_value = read_mfrc522_register(register_address);
+  write_mfrc522_register(register_address, current_register_value & ~bit_mask);
+}
+
+static void set_register_bits(BYTE register_address, BYTE bit_mask)
+{
+  BYTE current_register_value = read_mfrc522_register(register_address);
+  write_mfrc522_register(register_address, current_register_value | bit_mask);
+}
+
+static void reset_mfrc522_chip(void)
+{
+  MFRC522_RST = 1;
+  MFRC522_RST = 0;
+  MFRC522_RST = 1;
+  write_mfrc522_register(COMMANDREG, PCD_RESETPHASE);
+}
+
+static void enable_antenna(void)
+{
+  set_register_bits(TXCONTROLREG, ANTENNA_ENABLE_MASK);
+}
+
+static void disable_antenna(void)
+{
+  clear_register_bits(TXCONTROLREG, ANTENNA_ENABLE_MASK);
+}
+
+static void initialize_mfrc522_chip(void)
+{
+  MFRC522_CS = 1;
+  MFRC522_RST = 1;
+  reset_mfrc522_chip();
+
+  // Timer configuration for optimal RFID operation
+  write_mfrc522_register(TMODEREG, 0x8D);      // TAuto=1; f(Timer) = 6.78MHz/TPrescaler
+  write_mfrc522_register(TPRESCALERREG, 0x3E); // TModeReg[3..0] + TPrescalerReg
+  write_mfrc522_register(TRELOADREGL, 30);     // Reload value low byte
+  write_mfrc522_register(TRELOADREGH, 0);      // Reload value high byte
+  write_mfrc522_register(TXAUTOREG, 0x40);     // 100% ASK modulation
+  write_mfrc522_register(MODEREG, 0x3D);       // CRC initial value 0x6363
+
+  disable_antenna();
+  enable_antenna();
+}
+
+static BYTE communicate_with_card(BYTE command, BYTE *send_data, BYTE send_length, BYTE *receive_data, WORD *receive_length)
+{
+  BYTE operation_status = MI_ERR;
+  BYTE interrupt_enable = 0, wait_interrupt = 0;
+  BYTE byte_counter, irq_value, last_valid_bits;
+  WORD timeout_counter;
+
+  if (command == PCD_AUTHENT)
+  {
+    interrupt_enable = 0x12;
+    wait_interrupt = 0x10;
+  }
+  else if (command == PCD_TRANSCEIVE)
+  {
+    interrupt_enable = 0x77;
+    wait_interrupt = 0x30;
+  }
+
+  write_mfrc522_register(COMMIENREG, interrupt_enable | 0x80);
+  clear_register_bits(COMMIRQREG, 0x80);
+  set_register_bits(FIFOLEVELREG, 0x80);
+  write_mfrc522_register(COMMANDREG, PCD_IDLE);
+
+  for (byte_counter = 0; byte_counter < send_length; byte_counter++)
+  {
+    write_mfrc522_register(FIFODATAREG, send_data[byte_counter]);
+  }
+
+  write_mfrc522_register(COMMANDREG, command);
   if (command == PCD_TRANSCEIVE)
-    MFRC522_Set_Bit(BITFRAMINGREG, 0x80); // StartSend=1,transmission of data starts
-  i = 0xFFFF;
+    set_register_bits(BITFRAMINGREG, 0x80);
+
+  timeout_counter = TIMEOUT_MAX_RETRIES;
   do
   {
-    n = MFRC522_Rd(COMMIRQREG);
-    i--;
-  } while (i && !(n & 0x01) && !(n & waitIRq));
-  MFRC522_Clear_Bit(BITFRAMINGREG, 0x80);
-  if (i != 0)
+    irq_value = read_mfrc522_register(COMMIRQREG);
+    timeout_counter--;
+  } while (timeout_counter && !(irq_value & IRQ_CHECK_MASK_01) && !(irq_value & wait_interrupt));
+
+  clear_register_bits(BITFRAMINGREG, 0x80);
+
+  if (timeout_counter != 0)
   {
-    if (!(MFRC522_Rd(ERRORREG) & 0x1B))
+    if (!(read_mfrc522_register(ERRORREG) & ERROR_REGISTER_MASK))
     {
-      _status = MI_OK;
-      if (n & irqEn & 0x01)
-        _status = MI_NOTAGERR;
+      operation_status = MI_OK;
+      if (irq_value & interrupt_enable & IRQ_CHECK_MASK_01)
+        operation_status = MI_NOTAGERR;
+
       if (command == PCD_TRANSCEIVE)
       {
-        n = MFRC522_Rd(FIFOLEVELREG);
-        lastBits = MFRC522_Rd(CONTROLREG) & 0x07;
-        if (lastBits)
-          *backLen = (n - 1) * 8 + lastBits;
+        irq_value = read_mfrc522_register(FIFOLEVELREG);
+        last_valid_bits = read_mfrc522_register(CONTROLREG) & CONTROL_LAST_BITS_MASK;
+        if (last_valid_bits)
+          *receive_length = (irq_value - 1) * SPI_BITS_PER_BYTE + last_valid_bits;
         else
-          *backLen = n * 8;
-        if (n == 0)
-          n = 1;
-        else if (n > 16)
-          n = 16;
+          *receive_length = irq_value * SPI_BITS_PER_BYTE;
 
-        for (i = 0; i < n; i++)
-          backData[i] = MFRC522_Rd(FIFODATAREG);
-        backData[i] = 0;
+        if (irq_value == 0)
+          irq_value = MIN_FIFO_SIZE;
+        else if (irq_value > FIFO_MAX_SIZE)
+          irq_value = FIFO_MAX_SIZE;
+
+        for (byte_counter = 0; byte_counter < irq_value; byte_counter++)
+        {
+          receive_data[byte_counter] = read_mfrc522_register(FIFODATAREG);
+        }
+        receive_data[byte_counter] = 0;
       }
     }
     else
-      _status = MI_ERR;
+    {
+      operation_status = MI_ERR;
+    }
   }
-  return _status;
+  return operation_status;
 }
 
-char MFRC522_Request(char reqMode, char *TagType)
+static void calculate_crc_checksum(BYTE *input_data, BYTE data_length, BYTE *crc_output)
 {
-  char _status;
-  unsigned backBits;
-  MFRC522_Wr(BITFRAMINGREG, 0x07);
-  TagType[0] = reqMode;
-  _status = MFRC522_ToCard(PCD_TRANSCEIVE, TagType, 1, TagType, &backBits);
-  if ((_status != MI_OK) || (backBits != 0x10))
+  BYTE byte_counter, crc_status;
+  clear_register_bits(DIVIRQREG, CRC_IRQ_BIT_MASK);
+  set_register_bits(FIFOLEVELREG, 0x80);
+
+  for (byte_counter = 0; byte_counter < data_length; byte_counter++)
   {
-    _status = MI_ERR;
+    write_mfrc522_register(FIFODATAREG, input_data[byte_counter]);
   }
-  return _status;
-}
 
-void MFRC522_CRC(char *dataIn, char length, char *dataOut)
-{
-  char i, n;
-  MFRC522_Clear_Bit(DIVIRQREG, 0x04);
-  MFRC522_Set_Bit(FIFOLEVELREG, 0x80);
+  write_mfrc522_register(COMMANDREG, PCD_CALCCRC);
 
-  for (i = 0; i < length; i++)
-    MFRC522_Wr(FIFODATAREG, *dataIn++);
-
-  MFRC522_Wr(COMMANDREG, PCD_CALCCRC);
-
-  i = 0xFF;
-
+  byte_counter = ANTICOLL_TIMEOUT_RETRIES;
   do
   {
-    n = MFRC522_Rd(DIVIRQREG);
-    i--;
-  } while (i && !(n & 0x04)); // CRCIrq = 1
+    crc_status = read_mfrc522_register(DIVIRQREG);
+    byte_counter--;
+  } while (byte_counter && !(crc_status & CRC_IRQ_BIT_MASK));
 
-  dataOut[0] = MFRC522_Rd(CRCRESULTREGL);
-  dataOut[1] = MFRC522_Rd(CRCRESULTREGM);
+  crc_output[0] = read_mfrc522_register(CRCRESULTREGL);
+  crc_output[1] = read_mfrc522_register(CRCRESULTREGM);
 }
 
-char MFRC522_SelectTag(char *serNum)
+static BYTE perform_anticollision(BYTE *serial_number)
 {
-  char i;
-  char _status;
-  char size;
-  unsigned recvBits;
-  char buffer[9];
+  BYTE anticoll_status = MI_ERR;
+  BYTE byte_counter, checksum_verification = 0;
+  WORD response_length;
 
-  buffer[0] = PICC_SElECTTAG;
-  buffer[1] = 0x70;
+  write_mfrc522_register(BITFRAMINGREG, 0x00);
+  serial_number[0] = PICC_ANTICOLL;
+  serial_number[1] = 0x20;
+  clear_register_bits(STATUS2REG, 0x08);
+  anticoll_status = communicate_with_card(PCD_TRANSCEIVE, serial_number, 2, serial_number, &response_length);
 
-  for (i = 2; i < 7; i++)
-    buffer[(int)i] = *serNum++;
-
-  MFRC522_CRC(buffer, 7, &buffer[7]);
-
-  _status = MFRC522_ToCard(PCD_TRANSCEIVE, buffer, 9, buffer, &recvBits);
-  if ((_status == MI_OK) && (recvBits == 0x18))
-    size = buffer[0];
-  else
-    size = 0;
-  return size;
-}
-
-// hibernation
-void MFRC522_Halt()
-{
-  unsigned unLen;
-  char buff[4];
-
-  buff[0] = PICC_HALT;
-  buff[1] = 0;
-  MFRC522_CRC(buff, 2, &buff[2]);
-  MFRC522_Clear_Bit(STATUS2REG, 0x80);
-  MFRC522_ToCard(PCD_TRANSCEIVE, buff, 4, buff, &unLen);
-  MFRC522_Clear_Bit(STATUS2REG, 0x08);
-}
-
-char MFRC522_AntiColl(char *serNum)
-{
-  char _status;
-  char i;
-  char serNumCheck = 0;
-  unsigned unLen;
-  MFRC522_Wr(BITFRAMINGREG, 0x00); // TxLastBists = BitFramingReg[2..0]
-  serNum[0] = PICC_ANTICOLL;
-  serNum[1] = 0x20;
-  MFRC522_Clear_Bit(STATUS2REG, 0x08);
-  _status = MFRC522_ToCard(PCD_TRANSCEIVE, serNum, 2, serNum, &unLen);
-  if (_status == MI_OK)
+  if (anticoll_status == MI_OK)
   {
-    for (i = 0; i < 4; i++)
-      serNumCheck ^= serNum[(int)i];
-    if (serNumCheck != serNum[4])
-      _status = MI_ERR;
-  }
-  return _status;
-}
-
-char MFRC522_isCard(char *TagType)
-{
-  if (MFRC522_Request(PICC_REQIDL, TagType) == MI_OK)
-    return 1;
-  else
-    return 0;
-}
-char MFRC522_ReadCardSerial(unsigned char *str)
-{
-  char _status;
-  _status = MFRC522_AntiColl((char *)str);
-  str[5] = 0;
-  if (_status == MI_OK)
-    return 1;
-  else
-    return 0;
-}
-
-//-------------- Public functions: --------------
-void initRFID()
-{
-  InitPortDirections();
-  MFRC522_Init();
-}
-
-void ReadRFID_NoCooperatiu()
-{
-  unsigned char UID[16];
-  char TagType;
-
-  if (MFRC522_isCard(&TagType))
-  {
-    // At this point, TagType contains an integer value corresponding to the type of card.
-    // Read ID
-    if (MFRC522_ReadCardSerial(UID))
+    for (byte_counter = 0; byte_counter < UID_BYTES_COUNT; byte_counter++)
     {
-      // At this point, UID contains the value of the card.
+      checksum_verification ^= serial_number[byte_counter];
     }
-    MFRC522_Halt();
+    if (checksum_verification != serial_number[UID_BYTES_COUNT])
+      anticoll_status = MI_ERR;
   }
+  return anticoll_status;
+}
+
+static BYTE read_card_serial_number(BYTE *uid_string)
+{
+  BYTE read_operation_status = perform_anticollision(uid_string);
+  uid_string[UID_WITH_CHECKSUM_SIZE] = 0; // Null terminate
+  return (read_operation_status == MI_OK) ? 1 : 0;
+}
+
+static void halt_card_communication(void)
+{
+  WORD halt_response_length;
+  BYTE halt_command_buffer[4];
+  halt_command_buffer[0] = PICC_HALT;
+  halt_command_buffer[1] = 0;
+  calculate_crc_checksum(halt_command_buffer, 2, &halt_command_buffer[2]);
+  clear_register_bits(STATUS2REG, 0x80);
+  communicate_with_card(PCD_TRANSCEIVE, halt_command_buffer, 4, halt_command_buffer, &halt_response_length);
+  clear_register_bits(STATUS2REG, 0x08);
+}
+
+static void store_detected_uid(BYTE *detected_uid)
+{
+  BYTE uid_byte_index;
+  for (uid_byte_index = 0; uid_byte_index < RFID_UID_SIZE; uid_byte_index++)
+  {
+    stored_user_uid[uid_byte_index] = detected_uid[uid_byte_index];
+  }
+  user_card_detected = TRUE;
+  uid_transfer_position = 0;
 }

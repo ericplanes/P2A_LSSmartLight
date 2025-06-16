@@ -1,15 +1,15 @@
-#ifndef _TFID_H_
-#define _TFID_H_
+#ifndef _TRFID_H_
+#define _TRFID_H_
 
 #include <xc.h>
 #include <pic18f4321.h>
 #include "Utils.h"
 
-/* pin out
-SDA (Slave Select): Serial Data  (CS)
+/* Pin out
+SDA (Slave Select): Serial Data (CS)
 SCK: Serial Clock
-MOSI (SDI?):
-MISO (SDO?):
+MOSI: Master Output Slave Input
+MISO: Master Input Slave Output
 IRQ: Not connected
 GND
 RST: Reset
@@ -36,18 +36,20 @@ RST: Reset
 // End constant values
 //-------------------------------------------------
 
+// Commands for PCD (Proximity Coupling Device)
 #define PCD_IDLE 0x00       // NO action; Cancel the current command
 #define PCD_AUTHENT 0x0E    // Authentication Key
 #define PCD_RECEIVE 0x08    // Receive Data
 #define PCD_TRANSMIT 0x04   // Transmit data
-#define PCD_TRANSCEIVE 0x0C // Transmit and receive data,
+#define PCD_TRANSCEIVE 0x0C // Transmit and receive data
 #define PCD_RESETPHASE 0x0F // Reset
 #define PCD_CALCCRC 0x03    // CRC Calculate
 
+// Commands for PICC (Proximity Integrated Circuit Card)
 #define PICC_REQIDL 0x26    // find the antenna area does not enter hibernation
 #define PICC_REQALL 0x52    // find all the cards antenna area
 #define PICC_ANTICOLL 0x93  // anti-collision
-#define PICC_SElECTTAG 0x93 // election card
+#define PICC_SELECTTAG 0x93 // election card
 #define PICC_AUTHENT1A 0x60 // authentication key A
 #define PICC_AUTHENT1B 0x61 // authentication key B
 #define PICC_READ 0x30      // Read Block
@@ -58,11 +60,13 @@ RST: Reset
 #define PICC_TRANSFER 0xB0  // save the data in the buffer
 #define PICC_HALT 0x50      // Sleep
 
+// Status codes
 #define MI_OK 0
 #define MI_NOTAGERR 1
 #define MI_ERR 2
-//------------------MFRC522 Register---------------
 
+//------------------MFRC522 Register---------------
+// Page 0: Command and Status
 #define RESERVED00 0x00
 #define COMMANDREG 0x01
 #define COMMIENREG 0x02
@@ -79,7 +83,8 @@ RST: Reset
 #define BITFRAMINGREG 0x0D
 #define COLLREG 0x0E
 #define RESERVED01 0x0F
-// PAGE 1:Command
+
+// PAGE 1: Command
 #define RESERVED10 0x10
 #define MODEREG 0x11
 #define TXMODEREG 0x12
@@ -96,7 +101,8 @@ RST: Reset
 #define RESERVED13 0x1D
 #define RESERVED14 0x1E
 #define SERIALSPEEDREG 0x1F
-// PAGE 2:CFG
+
+// PAGE 2: CFG
 #define RESERVED20 0x20
 #define CRCRESULTREGM 0x21
 #define CRCRESULTREGL 0x22
@@ -113,7 +119,8 @@ RST: Reset
 #define TRELOADREGL 0x2D
 #define TCOUNTERVALUEREGH 0x2E
 #define TCOUNTERVALUEREGL 0x2F
-// PAGE 3:TEST REGISTER
+
+// PAGE 3: TEST REGISTER
 #define RESERVED30 0x30
 #define TESTSEL1REG 0x31
 #define TESTSEL2REG 0x32
@@ -131,29 +138,22 @@ RST: Reset
 #define RESERVED33 0x3E
 #define RESERVED34 0x3F
 
-//-------------- Private functions: --------------
-unsigned char MFRC522_Rd(unsigned char Address);
-void MFRC522_Wr(unsigned char Address, unsigned char value);
-void MFRC522_Clear_Bit(char addr, char mask);
-void MFRC522_Set_Bit(char addr, char mask);
-void MFRC522_Reset();
-void MFRC522_AntennaOn();
-void MFRC522_AntennaOff();
-void MFRC522_Init();
-char MFRC522_ToCard(char command, char *sendData, char sendLen, char *backData, unsigned *backLen);
-char MFRC522_Request(char reqMode, char *TagType);
-void MFRC522_CRC(char *dataIn, char length, char *dataOut);
-char MFRC522_SelectTag(char *serNum);
-void MFRC522_Halt();
-char MFRC522_AntiColl(char *serNum);
-char MFRC522_isCard(char *TagType);
-char MFRC522_ReadCardSerial(unsigned char *str);
+// UID related constants
+#define RFID_UID_SIZE 4     // Size of UID in bytes
+#define RFID_UID_STR_SIZE 9 // Size of UID string (4 bytes * 2 chars + null terminator)
 
-//-------------- Public functions: --------------
-void initRFID(void);
-// Post: initializes the RFID modem.
-void ReadRFID_NoCooperatiu(void);
-// Post: fills the variable TagType and UID with the type and value of the card
-// present at the sensor. WARNING: this function is not cooperative!
+//-------------- Public interface: --------------
+void RFID_Init(void);
+// Post: Initializes the RFID system
+
+void RFID_Motor(void);
+// Post: Cooperative motor that manages RFID card detection and reading
+
+BOOL RFID_HasReadUser(void);
+// Post: Returns TRUE if a user has been read, FALSE otherwise
+
+BOOL RFID_GetReadUserId(BYTE *rfid_uid);
+// Pre: RFID_HasReadUser() must return TRUE
+// Post: Fills the rfid_uid position by position while returning FALSE. Returns TRUE once done
 
 #endif
