@@ -212,6 +212,11 @@ void KEY_SetUserInside(BOOL inside)
     user_inside = inside;
 }
 
+void KEY_ResetCommand(void)
+{
+    command_ready = NO_COMMAND;
+}
+
 /* =======================================
  *          PRIVATE FUNCTION BODIES
  * ======================================= */
