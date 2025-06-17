@@ -84,6 +84,7 @@ static void set_cursor_position(BYTE row, BYTE column);
 static void write_character(BYTE character);
 static void write_string(const BYTE *string);
 static BYTE hex_to_char(BYTE value);
+static void lcd_init_sequence(void);
 
 /* =======================================
  *          PUBLIC FUNCTIONS
@@ -108,44 +109,8 @@ void LCD_Init(void)
 
     // Robust HD44780 initialization sequence with double execution
     // This approach increases reliability with non-compliant displays
-    for (BYTE init_attempt = 0; init_attempt < 2; init_attempt++)
-    {
-        // Extended power stabilization wait (150ms for maximum compatibility)
-        delay_ms(75); // 75ms * 2 = 150ms actual wait time
-
-        // HD44780 8-bit startup sequence (NO busy flag checking yet)
-        // Send 0x3 three times as per HD44780 datasheet
-        send_nibble_init(0x3);
-        delay_ms(10); // 20ms actual - well above 4.1ms minimum
-
-        send_nibble_init(0x3);
-        delay_ms(2); // 4ms actual - well above 100μs minimum
-
-        send_nibble_init(0x3);
-        delay_ms(2); // 4ms actual - well above 100μs minimum
-
-        // Switch to 4-bit mode with 0x2
-        send_nibble_init(0x2);
-        delay_ms(2); // 4ms actual - safe margin
-
-        // Configure LCD in 4-bit mode (still NO busy flag checking)
-        send_instruction_init(LCD_FUNCTION_SET | LCD_4BIT_MODE | LCD_2_LINE | LCD_5x8_DOTS);
-        delay_ms(1); // 2ms actual
-
-        send_instruction_init(LCD_DISPLAY_CONTROL); // Display off
-        delay_ms(1);                                // 2ms actual
-
-        send_instruction_init(LCD_CLEAR_DISPLAY); // Clear all DDRAM
-        delay_ms(6);                              // 12ms actual - well above 1.52ms clear time
-
-        send_instruction_init(LCD_ENTRY_MODE_SET | LCD_ENTRY_INCREMENT);
-        delay_ms(1); // 2ms actual
-
-        send_instruction_init(LCD_DISPLAY_CONTROL | LCD_DISPLAY_ON); // Display on
-        delay_ms(1);                                                 // 2ms actual
-    }
-
-    // After double initialization, LCD is fully ready for busy flag usage
+    lcd_init_sequence();
+    lcd_init_sequence();
 }
 
 void LCD_WriteNoUserInfo(void)
@@ -443,4 +408,41 @@ static BYTE hex_to_char(BYTE value)
         return 'A';
     }
     return '0'; // Default for invalid values
+}
+
+static void lcd_init_sequence(void)
+{
+    // Extended power stabilization wait (150ms for maximum compatibility)
+    delay_ms(75); // 75ms * 2 = 150ms actual wait time
+
+    // HD44780 8-bit startup sequence (NO busy flag checking yet)
+    // Send 0x3 three times as per HD44780 datasheet
+    send_nibble_init(0x3);
+    delay_ms(10); // 20ms actual - well above 4.1ms minimum
+
+    send_nibble_init(0x3);
+    delay_ms(2); // 4ms actual - well above 100μs minimum
+
+    send_nibble_init(0x3);
+    delay_ms(2); // 4ms actual - well above 100μs minimum
+
+    // Switch to 4-bit mode with 0x2
+    send_nibble_init(0x2);
+    delay_ms(2); // 4ms actual - safe margin
+
+    // Configure LCD in 4-bit mode (still NO busy flag checking)
+    send_instruction_init(LCD_FUNCTION_SET | LCD_4BIT_MODE | LCD_2_LINE | LCD_5x8_DOTS);
+    delay_ms(1); // 2ms actual
+
+    send_instruction_init(LCD_DISPLAY_CONTROL); // Display off
+    delay_ms(1);                                // 2ms actual
+
+    send_instruction_init(LCD_CLEAR_DISPLAY); // Clear all DDRAM
+    delay_ms(6);                              // 12ms actual - well above 1.52ms clear time
+
+    send_instruction_init(LCD_ENTRY_MODE_SET | LCD_ENTRY_INCREMENT);
+    delay_ms(1); // 2ms actual
+
+    send_instruction_init(LCD_DISPLAY_CONTROL | LCD_DISPLAY_ON); // Display on
+    delay_ms(1);                                                 // 2ms actual
 }
