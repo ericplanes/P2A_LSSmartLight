@@ -42,9 +42,6 @@ void LCD_Init(void);
 // Pre: TTimer module initialized
 // Post: LCD ready for use (takes ~300ms)
 
-void LCD_Reset(void);
-// Post: Reinitializes LCD completely, equivalent to LCD_Init()
-
 void LCD_WriteNoUserInfo(void);
 // Post: Display shows "no user" state with current system time
 

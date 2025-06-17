@@ -148,11 +148,6 @@ void LCD_Init(void)
     // After double initialization, LCD is fully ready for busy flag usage
 }
 
-void LCD_Reset(void)
-{
-    LCD_Init();
-}
-
 void LCD_WriteNoUserInfo(void)
 {
     // Clear display
