@@ -32,14 +32,6 @@ void HORA_Motor(void);
 // Increments minutes/hours as needed
 // Manages 24-hour time format (00:00 - 23:59)
 
-BYTE HORA_GetCurrentHour(void);
-// Post: Returns current hour value (0-23)
-
-BYTE HORA_GetCurrentMinute(void);
-// Post: Returns current minute value (0-59)
-
-// Temporarily disabled to save memory
-/*
 void HORA_GetTime(BYTE *hour, BYTE *minutes);
 // Post: Returns current time via output parameters
 // *hour contains current hour (0-23)
@@ -49,6 +41,5 @@ void HORA_SetTime(BYTE hour, BYTE minutes);
 // Pre: hour (0-23), minutes (0-59)
 // Post: Sets system time to specified values
 // Updates internal time counters
-*/
 
 #endif

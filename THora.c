@@ -47,9 +47,6 @@ void HORA_Motor(void)
     }
 }
 
-/*
-// Functions temporarily disabled to save memory
-
 void HORA_GetTime(BYTE *hour, BYTE *minutes)
 {
     *hour = current_hour;
@@ -74,4 +71,3 @@ void HORA_SetTime(BYTE hour, BYTE minutes)
     TiResetTics(TI_HORA);
     LCD_UpdateTime(current_hour, current_minutes);
 }
-*/
