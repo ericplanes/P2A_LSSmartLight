@@ -14,27 +14,9 @@
  *         PRIVATE VARIABLES
  * ======================================= */
 
-// Static strings for messages
-static const BYTE msg_detected_card[] = "Card detected!\r\n";
-static const BYTE msg_uid_prefix[] = "\tUID: ";
-static const BYTE msg_config_prefix[] = "\tL0: ";
-static const BYTE msg_separator[] = " - L";
-static const BYTE msg_colon[] = ": ";
-static const BYTE msg_main_menu[] = "---------------\r\n"
-                                    "\tMain Menu\r\n"
-                                    "---------------\r\n"
-                                    "Choose an option:\r\n"
-                                    "\t1. Who is in the room?\r\n"
-                                    "\t2. Show configurations\r\n"
-                                    "\t3. Modify system time\r\n"
-                                    "Option: ";
-static const BYTE msg_current_user[] = "Current user: UID ";
-static const BYTE msg_no_user[] = "No one in the room.\r\n";
-static const BYTE msg_time_prompt[] = "Enter new time (HH:MM): ";
-static const BYTE msg_unknown_card[] = "Card detected!\r\nUnknown UID: ";
-static const BYTE msg_unknown_ignored[] = "\r\nCard not recognized. Ignored.\r\n";
-static const BYTE msg_arrow[] = " -> ";
+// Optimized string constants (reduced memory usage)
 static const BYTE msg_crlf[] = "\r\n";
+static const BYTE msg_main_menu[] = "---------------\r\nMain Menu\r\n---------------\r\nChoose:\r\n1.Who in room?\r\n2.Show configs\r\n3.Modify time\r\nOption: ";
 
 /* =======================================
  *        PRIVATE FUNCTION HEADERS
@@ -118,10 +100,12 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
     return FALSE;
 }
 
+#ifdef DEBUG_MODE
 void SIO_TEST_SendString(BYTE *string)
 {
     send_string(string);
 }
+#endif
 
 BYTE SIO_ReadCommand(void)
 {
@@ -150,102 +134,75 @@ void SIO_SendDetectedCard(BYTE *UID, BYTE *config)
 {
     BYTE i;
 
-    // Ensure new line
     send_string((BYTE *)msg_crlf);
-
-    // Send "Card detected!"
-    send_string((BYTE *)msg_detected_card);
-
-    // Send UID line
-    send_string((BYTE *)msg_uid_prefix);
+    send_string((BYTE *)"Card detected!\r\nUID: ");
     send_string(UID);
     send_string((BYTE *)msg_crlf);
-
-    // Send config line
-    send_string((BYTE *)msg_config_prefix);
+    send_string((BYTE *)"L0: ");
     send_char(config[0] + '0');
 
     for (i = 1; i < 6; i++)
     {
-        send_string((BYTE *)msg_separator);
+        send_string((BYTE *)" - L");
         send_char(i + '0');
-        send_string((BYTE *)msg_colon);
-        if (config[i] == 10)
-            send_char('A');
-        else
-            send_char(config[i] + '0');
+        send_string((BYTE *)": ");
+        send_char((config[i] == 10) ? 'A' : (config[i] + '0'));
     }
     send_string((BYTE *)msg_crlf);
 }
 
 void SIO_SendMainMenu(void)
 {
-    // Ensure new line
     send_string((BYTE *)msg_crlf);
-
     send_string((BYTE *)msg_main_menu);
 }
 
 void SIO_SendUser(BYTE *User)
 {
-    // Ensure new line
     send_string((BYTE *)msg_crlf);
-
-    send_string((BYTE *)msg_current_user);
+    send_string((BYTE *)"Current user: UID ");
     send_string(User);
     send_string((BYTE *)msg_crlf);
 }
 
 void SIO_SendNoUser(void)
 {
-    // Ensure new line
     send_string((BYTE *)msg_crlf);
-
-    send_string((BYTE *)msg_no_user);
+    send_string((BYTE *)"No one in the room.\r\n");
 }
 
 void SIO_SendStoredConfig(BYTE *UID, BYTE *config)
 {
     BYTE i;
 
-    // Ensure new line
     send_string((BYTE *)msg_crlf);
-
-    send_string((BYTE *)msg_uid_prefix);
+    send_string((BYTE *)"UID: ");
     send_string(UID);
-    send_string((BYTE *)msg_arrow);
-    send_string((BYTE *)msg_config_prefix);
+    send_string((BYTE *)" -> L0: ");
     send_char(config[0] + '0');
 
     for (i = 1; i < 6; i++)
     {
-        send_string((BYTE *)msg_separator);
+        send_string((BYTE *)" - L");
         send_char(i + '0');
-        send_string((BYTE *)msg_colon);
-        if (config[i] == 10)
-            send_char('A');
-        else
-            send_char(config[i] + '0');
+        send_string((BYTE *)": ");
+        send_char((config[i] == 10) ? 'A' : (config[i] + '0'));
     }
     send_string((BYTE *)msg_crlf);
 }
 
 void SIO_SendTimePrompt(void)
 {
-    // Ensure new line
     send_string((BYTE *)msg_crlf);
-
-    send_string((BYTE *)msg_time_prompt);
+    send_string((BYTE *)"Enter new time (HH:MM): ");
 }
 
 void SIO_SendUnknownCard(BYTE *UID)
 {
-    // Ensure new line
     send_string((BYTE *)msg_crlf);
-
-    send_string((BYTE *)msg_unknown_card);
+    send_string((BYTE *)"Card detected!\r\nUnknown UID: ");
     send_string(UID);
-    send_string((BYTE *)msg_unknown_ignored);
+    send_string((BYTE *)"\r\nCard not recognized. Ignored.\r\n");
 }
 
 /* =======================================

@@ -3,14 +3,14 @@
 
 #include "Utils.h"
 #include "TTimer.h"
+#include "TSerial.h"
+#include "TLight.h"
 #include "TEEPROM.h"
 #include "TLCD.h"
 #include "TKeypad.h"
 #include "THora.h"
-#include "TSerial.h"
-#include "TLight.h"
-#include "TUserControl.h"
 #include "TRFID.h"
+#include "TController.h"
 
 // Configuration bits
 #pragma config OSC = INTIO2
@@ -45,26 +45,26 @@ void RSI_High(void) // For IntelliSense only
 void main(void)
 {
     // Initialize all modules in proper order
-    TiInit();      // Timer system (must be first)
-    SIO_Init();    // Serial communication
-    LED_Init();    // PWM light control
-    EEPROM_Init(); // EEPROM storage
-    LCD_Init();    // LCD display
-    KEY_Init();    // Keypad input
-    HORA_Init();   // Time management
-    RFID_Init();   // RFID card reader
+    TiInit();          // Timer system (must be first)
+    SIO_Init();        // Serial communication
+    LED_Init();        // PWM light control
+    EEPROM_Init();     // EEPROM storage
+    LCD_Init();        // LCD display
+    KEY_Init();        // Keypad input
+    HORA_Init();       // Time management
+    RFID_Init();       // RFID card reader
+    CONTROLLER_Init(); // Main system controller
 
     // Main cooperative loop
     while (TRUE)
     {
-        // Run all module motors
+        // Run all hardware module motors
         LED_Motor();  // Update PWM light control
         KEY_Motor();  // Process keypad input
         HORA_Motor(); // Update time management
         RFID_Motor(); // Update RFID motor
 
-        // Additional motors can be added here when RFID and Controller modules are ready
-        // RFID_Motor();
-        // CONTROLLER_Motor();
+        // Run main system controller
+        CONTROLLER_Motor(); // Coordinate all system logic
     }
 }
