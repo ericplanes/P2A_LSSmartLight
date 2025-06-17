@@ -47,12 +47,6 @@ void HORA_Motor(void)
     }
 }
 
-void HORA_GetTime(BYTE *hour, BYTE *minutes)
-{
-    *hour = current_hour;
-    *minutes = current_minutes;
-}
-
 void HORA_SetTime(BYTE hour, BYTE minutes)
 {
     // Validate and set hour (0-99)

@@ -86,22 +86,23 @@ void CONTROLLER_Motor(void)
         break;
 
     case ST_PROCESS_KEYPAD:
-        cmd = KEY_GetCommand();
-        if (cmd == UPDATE_LED)
+        switch (KEY_GetCommand())
         {
+        case UPDATE_LED:
             KEY_GetUpdateInfo(&led, &intensity);
             current_config[led] = intensity;
             KEY_ResetCommand();
             state = ST_UPDATE_STORED_CONFIG;
-        }
-        else if (cmd == KEYPAD_RESET)
-        {
+            break;
+        case KEYPAD_RESET:
             reset_system();
-            KEY_ResetCommand();
+            state = ST_WAIT_INPUT;
+            break;
+        default:
             state = ST_PROCESS_RFID;
         }
-
         break;
+
     case ST_UPDATE_STORED_CONFIG:
         if (EEPROM_StoreConfigForUser(current_user_position, current_config))
         {
@@ -110,6 +111,8 @@ void CONTROLLER_Motor(void)
             state = ST_PROCESS_RFID;
         }
         break;
+
+        /*
     case ST_PROCESS_RFID:
         if (RFID_HasReadUser() && RFID_GetReadUserId(rfid_uid))
         {
@@ -207,7 +210,7 @@ void CONTROLLER_Motor(void)
             LCD_UpdateTime(time_hour, time_minute);
             state = ST_WAIT_INPUT;
         }
-        break;
+        break; //*/
     }
 }
 

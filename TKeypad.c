@@ -74,23 +74,7 @@ static BYTE led_intensity = 0;
 static BOOL waiting_for_second_key = FALSE;
 static BOOL user_inside = FALSE;
 
-// Key mapping table: [row][col] -> key_value
-// Row mapping: F0=0, F1=1, F2=2, F3=3
-// Col mapping: C0=0, C1=1, C2=2
-static const BYTE key_table[KEYPAD_ROWS][KEYPAD_COLS] = {
-    {1, 2, 3},              // F0 (A1): 1, 2, 3
-    {4, 5, 6},              // F1 (A6): 4, 5, 6
-    {7, 8, 9},              // F2 (A5): 7, 8, 9
-    {STAR_KEY, 0, HASH_KEY} // F3 (A3): *, 0, #
-};
-
-// Row pins array for scanning
-static const BYTE row_pins[KEYPAD_ROWS] = {
-    ROW0_PIN, // F0 -> A1
-    ROW1_PIN, // F1 -> A6
-    ROW2_PIN, // F2 -> A5
-    ROW3_PIN  // F3 -> A3
-};
+// Optimized: Arrays replaced with inline calculations to save memory
 
 /* =======================================
  *       PRIVATE FUNCTION HEADERS
@@ -237,14 +221,33 @@ void KEY_ResetCommand(void)
 
 static void scan_keypad(void)
 {
+    BYTE current_row_pin;
+
     // Cycle through rows (F0, F1, F2, F3)
     row_index = (row_index + 1) % KEYPAD_ROWS;
+
+    // Calculate row pin inline to save memory
+    switch (row_index)
+    {
+    case 0:
+        current_row_pin = ROW0_PIN;
+        break;
+    case 1:
+        current_row_pin = ROW1_PIN;
+        break;
+    case 2:
+        current_row_pin = ROW2_PIN;
+        break;
+    default:
+        current_row_pin = ROW3_PIN;
+        break;
+    }
 
     // Set all row pins HIGH first (inactive)
     LATA |= ROWS_MASK;
 
     // Set current row pin LOW to activate it
-    LATA &= ~row_pins[row_index];
+    LATA &= ~current_row_pin;
 }
 
 static BYTE is_key_pressed(void)
@@ -277,7 +280,19 @@ static BYTE convert_to_key(void)
         return NO_KEY_PRESSED; // No valid column detected
     }
 
-    return key_table[row_index][col_index];
+    // Calculate key value inline to save memory
+    if (row_index == 3) // Bottom row: *, 0, #
+    {
+        if (col_index == 0)
+            return STAR_KEY;
+        if (col_index == 1)
+            return 0;
+        return HASH_KEY;
+    }
+    else // Rows 0-2: standard numeric layout
+    {
+        return (row_index * 3) + col_index + 1;
+    }
 }
 
 static void process_detected_key(BYTE key)
@@ -302,7 +317,7 @@ static void process_detected_key(BYTE key)
 
 static BYTE is_valid_led_number(BYTE key)
 {
-    return (MIN_LED_NUMBER <= key && key <= MAX_LED_NUMBER);
+    return (key <= MAX_LED_NUMBER);
 }
 
 static BYTE is_hash_key(BYTE key)

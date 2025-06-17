@@ -84,13 +84,13 @@
       <HI-TECH-COMP>
         <property key="additional-warnings" value="true"/>
         <property key="asmlist" value="true"/>
-        <property key="call-prologues" value="false"/>
+        <property key="call-prologues" value="true"/>
         <property key="default-bitfield-type" value="true"/>
         <property key="default-char-type" value="true"/>
         <property key="define-macros" value=""/>
-        <property key="disable-optimizations" value="true"/>
+        <property key="disable-optimizations" value="false"/>
         <property key="extra-include-directories" value=""/>
-        <property key="favor-optimization-for" value="-speed,+space"/>
+        <property key="favor-optimization-for" value="+speed,+space"/>
         <property key="garbage-collect-data" value="true"/>
         <property key="garbage-collect-functions" value="true"/>
         <property key="identifier-length" value="255"/>
@@ -102,8 +102,8 @@
         <property key="optimization-debug" value="false"/>
         <property key="optimization-invariant-enable" value="false"/>
         <property key="optimization-invariant-value" value="16"/>
-        <property key="optimization-level" value="-O0"/>
-        <property key="optimization-speed" value="false"/>
+        <property key="optimization-level" value="-O1"/>
+        <property key="optimization-speed" value="true"/>
         <property key="optimization-stable-enable" value="false"/>
         <property key="preprocess-assembler" value="true"/>
         <property key="short-enums" value="true"/>
@@ -114,6 +114,9 @@
         <property key="verbose" value="false"/>
         <property key="warning-level" value="-3"/>
         <property key="what-to-do" value="ignore"/>
+        <property key="enable-omit-frame-pointer" value="true"/>
+        <property key="enable-symbols" value="false"/>
+        <property key="enable-unroll-loops" value="true"/>
       </HI-TECH-COMP>
       <HI-TECH-LINK>
         <property key="additional-options-checksum" value=""/>
@@ -174,6 +177,7 @@
         <property key="opt-xc8-linker-serial" value=""/>
         <property key="program-the-device-with-default-config-words" value="false"/>
         <property key="remove-unused-sections" value="true"/>
+        <property key="additional-options-command-line" value="--opt=default,+asm,+asmfile,+speed,+space,+debug,-local --double=24 --float=24 --Wl,--gc-sections --Wl,--relax"/>
       </HI-TECH-LINK>
       <XC8-CO>
         <property key="coverage-enable" value=""/>
@@ -196,6 +200,9 @@
         <property key="stack-type" value="compiled"/>
         <property key="user-pack-device-support" value=""/>
         <property key="wpo-lto" value="false"/>
+        <property key="enable-short-float" value="false"/>
+        <property key="enable-short-double" value="false"/>
+        <property key="enable-pack-struct" value="true"/>
       </XC8-config-global>
     </conf>
   </confs>

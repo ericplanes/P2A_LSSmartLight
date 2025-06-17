@@ -32,9 +32,9 @@
 #define SPI_ADDRESS_SHIFT 1 // Left shift for address
 
 // MFRC522 communication timeouts and thresholds
-#define TIMEOUT_MAX_RETRIES 0xFFFF
-#define IRQ_TIMEOUT_RETRIES 0x0F
-#define ANTICOLL_TIMEOUT_RETRIES 0xFF
+#define TIMEOUT_MAX_RETRIES 0x1FF     // Reduced from 65535 to 511
+#define IRQ_TIMEOUT_RETRIES 0x07      // Reduced from 15 to 7
+#define ANTICOLL_TIMEOUT_RETRIES 0x3F // Reduced from 255 to 63
 #define CARD_DETECTION_DELAY_MS 500
 
 // FIFO and data handling
@@ -59,7 +59,7 @@
 
 static BYTE current_rfid_state;
 static BYTE communication_status;
-static WORD rfid_timer_handle;
+static BYTE rfid_timer_handle;
 static BOOL user_card_detected;
 static BYTE stored_user_uid[RFID_UID_SIZE];
 static BYTE uid_transfer_position;
@@ -114,37 +114,19 @@ void RFID_Motor(void)
     break;
 
   case STATE_RFID_CONFIG_FRAME:
+    // Combined configuration sequence to save memory
     write_mfrc522_register(BITFRAMINGREG, 0x07);
-    current_rfid_state = STATE_RFID_CONFIG_IRQ;
-    break;
-
-  case STATE_RFID_CONFIG_IRQ:
     write_mfrc522_register(COMMIENREG, 0x77 | 0x80);
-    current_rfid_state = STATE_RFID_CLEAR_IRQ;
-    break;
-
-  case STATE_RFID_CLEAR_IRQ:
     clear_register_bits(COMMIRQREG, 0x80);
     set_register_bits(FIFOLEVELREG, 0x80);
-    current_rfid_state = STATE_RFID_SET_IDLE;
-    break;
-
-  case STATE_RFID_SET_IDLE:
     write_mfrc522_register(COMMANDREG, PCD_IDLE);
     current_rfid_state = STATE_RFID_SEND_REQ;
     break;
 
   case STATE_RFID_SEND_REQ:
+    // Combined request sequence to save memory
     write_mfrc522_register(FIFODATAREG, PICC_REQIDL);
-    current_rfid_state = STATE_RFID_START_TRANSCEIVE;
-    break;
-
-  case STATE_RFID_START_TRANSCEIVE:
     write_mfrc522_register(COMMANDREG, PCD_TRANSCEIVE);
-    current_rfid_state = STATE_RFID_START_SEND;
-    break;
-
-  case STATE_RFID_START_SEND:
     set_register_bits(BITFRAMINGREG, 0x80);
     current_rfid_state = STATE_RFID_WAIT_IRQ;
     break;
