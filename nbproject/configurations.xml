@@ -4,6 +4,7 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <itemPath>TController.h</itemPath>
       <itemPath>TEEPROM.h</itemPath>
       <itemPath>THora.h</itemPath>
       <itemPath>TKeypad.h</itemPath>
@@ -28,11 +29,13 @@
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>main.c</itemPath>
+      <itemPath>TController.c</itemPath>
       <itemPath>TEEPROM.c</itemPath>
       <itemPath>THora.c</itemPath>
       <itemPath>TKeypad.c</itemPath>
       <itemPath>TLCD.c</itemPath>
       <itemPath>TLight.c</itemPath>
+      <itemPath>TRFID.c</itemPath>
       <itemPath>TSerial.c</itemPath>
       <itemPath>TTimer.c</itemPath>
       <itemPath>TUserControl.c</itemPath>
