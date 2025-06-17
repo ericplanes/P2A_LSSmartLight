@@ -5,30 +5,30 @@
  *              CONSTANTS
  * ======================================= */
 
-// LED port and pin assignments (easily modifiable)
-#define LED0_PORT PORTA
-#define LED0_TRIS TRISA
-#define LED0_PIN 2 // PORTA bit 2 (RA2)
+// New LED pin assignments: LED0->RD1, LED1->RD2, LED2->RD3, LED3->RC4, LED4->RC5, LED5->RD4
+#define LED0_PORT PORTD
+#define LED0_TRIS TRISD
+#define LED0_PIN 1 // PORTD bit 1 (RD1)
 
-#define LED1_PORT PORTA
-#define LED1_TRIS TRISA
-#define LED1_PIN 3 // PORTA bit 3 (RA3)
+#define LED1_PORT PORTD
+#define LED1_TRIS TRISD
+#define LED1_PIN 2 // PORTD bit 2 (RD2)
 
-#define LED2_PORT PORTA
-#define LED2_TRIS TRISA
-#define LED2_PIN 4 // PORTA bit 4 (RA4)
+#define LED2_PORT PORTD
+#define LED2_TRIS TRISD
+#define LED2_PIN 3 // PORTD bit 3 (RD3)
 
-#define LED3_PORT PORTA
-#define LED3_TRIS TRISA
-#define LED3_PIN 5 // PORTA bit 5 (RA5)
+#define LED3_PORT PORTC
+#define LED3_TRIS TRISC
+#define LED3_PIN 4 // PORTC bit 4 (RC4)
 
-#define LED4_PORT PORTA
-#define LED4_TRIS TRISA
-#define LED4_PIN 6 // PORTA bit 6 (RA6)
+#define LED4_PORT PORTC
+#define LED4_TRIS TRISC
+#define LED4_PIN 5 // PORTC bit 5 (RC5)
 
-#define LED5_PORT PORTA
-#define LED5_TRIS TRISA
-#define LED5_PIN 7 // PORTA bit 7 (RA7)
+#define LED5_PORT PORTD
+#define LED5_TRIS TRISD
+#define LED5_PIN 4 // PORTD bit 4 (RD4)
 
 // PWM configuration
 #define MAX_TICS 10 // Maximum tics for PWM cycle (1 tic each 2ms = 50 Hz)
@@ -60,12 +60,12 @@ static BYTE led_config[NUM_LEDS];
 void LED_Init(void)
 {
     // Configure LED pins as outputs using helper function
-    configure_led_as_output(&LED0_TRIS, LED0_PIN); // LED0 output
-    configure_led_as_output(&LED1_TRIS, LED1_PIN); // LED1 output
-    configure_led_as_output(&LED2_TRIS, LED2_PIN); // LED2 output
-    configure_led_as_output(&LED3_TRIS, LED3_PIN); // LED3 output
-    configure_led_as_output(&LED4_TRIS, LED4_PIN); // LED4 output
-    configure_led_as_output(&LED5_TRIS, LED5_PIN); // LED5 output
+    configure_led_as_output(&LED0_TRIS, LED0_PIN); // LED0 -> RD1 output
+    configure_led_as_output(&LED1_TRIS, LED1_PIN); // LED1 -> RD2 output
+    configure_led_as_output(&LED2_TRIS, LED2_PIN); // LED2 -> RD3 output
+    configure_led_as_output(&LED3_TRIS, LED3_PIN); // LED3 -> RC4 output
+    configure_led_as_output(&LED4_TRIS, LED4_PIN); // LED4 -> RC5 output
+    configure_led_as_output(&LED5_TRIS, LED5_PIN); // LED5 -> RD4 output
 
     // Initialize all LEDs to OFF using helper function
     set_led_state(LED_OFF, &LED0_PORT, LED0_PIN); // LED0 OFF
