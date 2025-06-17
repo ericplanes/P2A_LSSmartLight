@@ -29,7 +29,4 @@ void KEY_SetUserInside(BOOL inside);
 // Pre: inside is TRUE if user is inside the room, FALSE otherwise
 // Post: if false, the keypad will not respond to any key press
 
-void KEY_ResetCommand(void);
-// Post: Resets the command state to NO_COMMAND
-
 #endif
