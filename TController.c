@@ -17,20 +17,30 @@
 #define UID_STRING_SIZE 15
 #define CONFIG_SIZE 6
 
-// States
-#define ST_INIT 0
-#define ST_WAIT_INPUT 1
-#define ST_PROCESS_KEYPAD 2
-#define ST_PROCESS_RFID 3
-#define ST_PROCESS_SERIAL 4
-#define ST_UPDATE_TIME_WAIT 5
-#define ST_UPDATE_STORED_CONFIG 6
+/* =======================================
+ *         CONTROLLER STATES
+ *         Naming: WHEN_ACTION
+ * ======================================= */
+
+#define BOOT_INIT_SYSTEM 0          // On system boot - initialize display and LEDs
+#define INPUT_WAIT_DETECT 1         // Waits until input detected (keypad/RFID/serial)
+#define KEY_PROCESS_CMD 2           // On keypad input - process LED update or reset
+#define KEY_STORE_CONFIG 3          // After LED update - store to EEPROM
+#define RFID_READ_CARD_DATA 4       // On card detected - read UID data
+#define RFID_VALIDATE_USER 5        // On UID complete - validate against known users
+#define RFID_USER_ENTER 6           // On valid new user - configure room
+#define RFID_USER_EXIT 7            // On same user card - user leaving
+#define RFID_LOAD_USER_CONFIG 8     // After user validation - load their config
+#define SERIAL_PROCESS_CMD 9        // On serial input - process menu commands
+#define SERIAL_SEND_WHO_RESPONSE 10 // On "who in room" - send current user
+#define SERIAL_SEND_CONFIGS 11      // On "show configs" - send all stored configs
+#define SERIAL_WAIT_TIME_INPUT 12   // After time request - wait for time data
 
 /* =======================================
  *         PRIVATE VARIABLES
  * ======================================= */
 
-static BYTE state = ST_INIT;
+static BYTE state = BOOT_INIT_SYSTEM;
 static BOOL user_inside;
 static BYTE current_user_uid[UID_SIZE];
 static BYTE current_user_position;
@@ -38,13 +48,20 @@ static BYTE current_config[CONFIG_SIZE];
 static BYTE uid_buffer[UID_STRING_SIZE];
 static BYTE time_hour = 0, time_minute = 0;
 
+// Processing variables
+static BYTE rfid_uid[UID_SIZE];
+static BYTE cmd_buffer;
+static BYTE led_num, led_intensity;
+static BYTE user_pos;
+
 /* =======================================
  *       PRIVATE FUNCTION HEADERS
  * ======================================= */
 
-static void format_uid(BYTE *uid);
+static void format_uid(const BYTE *uid);
 static void reset_system(void);
 static BYTE hex_char(BYTE val);
+static void clean_config(void);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -52,7 +69,7 @@ static BYTE hex_char(BYTE val);
 
 void CONTROLLER_Init(void)
 {
-    state = ST_INIT;
+    state = BOOT_INIT_SYSTEM;
     user_inside = FALSE;
     current_user_position = USER_NOT_FOUND;
 
@@ -66,151 +83,186 @@ void CONTROLLER_Init(void)
 
 void CONTROLLER_Motor(void)
 {
-    BYTE cmd, led, intensity, pos;
-    BYTE rfid_uid[UID_SIZE];
-
     switch (state)
     {
-    case ST_INIT:
+    case BOOT_INIT_SYSTEM:
+        // On system boot - initialize display and LEDs
         SIO_SendMainMenu();
         LCD_WriteNoUserInfo();
         LED_UpdateConfig(current_config); // All zeroes
-        state = ST_WAIT_INPUT;
+        state = INPUT_WAIT_DETECT;
         break;
 
-    case ST_WAIT_INPUT:
-        if (user_inside)
-            state = ST_PROCESS_KEYPAD;
-        else
-            state = ST_PROCESS_RFID;
-        break;
-
-    case ST_PROCESS_KEYPAD:
-        switch (KEY_GetCommand())
+    case INPUT_WAIT_DETECT:
+        // Waits until input detected (keypad/RFID/serial)
+        cmd_buffer = KEY_GetCommand();
+        if (user_inside && cmd_buffer != NO_COMMAND)
         {
-        case UPDATE_LED:
-            KEY_GetUpdateInfo(&led, &intensity);
-            current_config[led] = intensity;
-            KEY_ResetCommand();
-            state = ST_UPDATE_STORED_CONFIG;
+            state = KEY_PROCESS_CMD;
             break;
-        case KEYPAD_RESET:
-            reset_system();
-            state = ST_WAIT_INPUT;
+        }
+
+        if (RFID_HasReadUser())
+        {
+            state = RFID_READ_CARD_DATA;
             break;
-        default:
-            state = ST_PROCESS_RFID;
+        }
+
+        cmd_buffer = SIO_ReadCommand();
+        if (cmd_buffer != NO_COMMAND)
+        {
+            state = SERIAL_PROCESS_CMD;
+            break;
         }
         break;
 
-    case ST_UPDATE_STORED_CONFIG:
+    case KEY_PROCESS_CMD: // On keypad input - process LED update or reset
+        if (cmd_buffer == UPDATE_LED)
+        {
+            KEY_GetUpdateInfo(&led_num, &led_intensity);
+            current_config[led_num] = led_intensity;
+            state = KEY_STORE_CONFIG;
+        }
+
+        if (cmd_buffer == KEYPAD_RESET)
+        {
+            reset_system();
+            state = INPUT_WAIT_DETECT; // Done
+        }
+        break;
+
+    case KEY_STORE_CONFIG:
         if (EEPROM_StoreConfigForUser(current_user_position, current_config))
         {
             LED_UpdateConfig(current_config);
             LCD_WriteUserInfo(current_user_uid[4], current_config);
-            state = ST_PROCESS_RFID;
+            state = INPUT_WAIT_DETECT;
         }
         break;
 
-        /*
-    case ST_PROCESS_RFID:
-        if (RFID_HasReadUser() && RFID_GetReadUserId(rfid_uid))
+    case RFID_READ_CARD_DATA:
+        if (RFID_GetReadUserId(rfid_uid))
+            state = RFID_VALIDATE_USER;
+        break;
+
+    case RFID_VALIDATE_USER:
+        user_pos = USER_FindPositionByRFID(rfid_uid);
+        if (user_pos == USER_NOT_FOUND)
         {
-            pos = USER_FindPositionByRFID(rfid_uid);
-
-            if (pos == USER_NOT_FOUND)
-            {
-                format_uid(rfid_uid);
-                SIO_SendUnknownCard(uid_buffer);
-            }
-            else if (user_inside && pos == current_user_position)
-            {
-                // User leaving
-                user_inside = FALSE;
-                current_user_position = USER_NOT_FOUND;
-                KEY_SetUserInside(FALSE);
-
-                format_uid(current_user_uid);
-                SIO_SendDetectedCard(uid_buffer, current_config);
-                LCD_WriteNoUserInfo();
-
-                for (BYTE i = 0; i < CONFIG_SIZE; i++)
-                    current_config[i] = 0;
-                LED_UpdateConfig(current_config);
-            }
-            else
-            {
-                // New user entering
-                user_inside = TRUE;
-                current_user_position = pos;
-                for (BYTE i = 0; i < UID_SIZE; i++)
-                    current_user_uid[i] = rfid_uid[i];
-
-                EEPROM_ReadConfigForUser(pos, current_config);
-                LED_UpdateConfig(current_config);
-
-                format_uid(current_user_uid);
-                SIO_SendDetectedCard(uid_buffer, current_config);
-                LCD_WriteUserInfo(current_user_uid[4], current_config);
-                KEY_SetUserInside(TRUE);
-            }
+            format_uid(rfid_uid);
+            SIO_SendUnknownCard(uid_buffer);
+            state = INPUT_WAIT_DETECT; // Done
         }
-
-        state = ST_PROCESS_SERIAL;
+        else if (user_inside && user_pos == current_user_position)
+        {
+            state = RFID_USER_EXIT;
+        }
+        else
+        {
+            state = RFID_USER_ENTER;
+        }
         break;
 
-    case ST_PROCESS_SERIAL:
-        switch (SIO_ReadCommand())
+    case RFID_USER_ENTER:
+        user_inside = TRUE;
+        current_user_position = user_pos;
+        for (BYTE i = 0; i < UID_SIZE; i++)
+            current_user_uid[i] = rfid_uid[i];
+
+        KEY_SetUserInside(TRUE);
+        state = RFID_LOAD_USER_CONFIG;
+        break;
+
+    case RFID_LOAD_USER_CONFIG:
+        if (EEPROM_ReadConfigForUser(current_user_position, current_config))
+        {
+            LED_UpdateConfig(current_config);
+            format_uid(current_user_uid);
+            SIO_SendDetectedCard(uid_buffer, current_config);
+            LCD_WriteUserInfo(current_user_uid[4], current_config);
+            state = INPUT_WAIT_DETECT;
+        }
+        break;
+
+    case RFID_USER_EXIT:
+        user_inside = FALSE;
+        current_user_position = USER_NOT_FOUND;
+        KEY_SetUserInside(FALSE);
+
+        format_uid(current_user_uid);
+        SIO_SendDetectedCard(uid_buffer, current_config);
+        LCD_WriteNoUserInfo();
+
+        clean_config();
+        LED_UpdateConfig(current_config);
+        state = INPUT_WAIT_DETECT;
+        break;
+
+    case SERIAL_PROCESS_CMD:
+        switch (cmd_buffer)
         {
         case CMD_WHO_IN_ROOM:
-            if (user_inside)
-            {
-                format_uid(current_user_uid);
-                SIO_SendUser(uid_buffer);
-            }
-            else
-            {
-                SIO_SendNoUser();
-            }
+            state = SERIAL_SEND_WHO_RESPONSE;
             break;
 
         case CMD_SHOW_STORED_CONF:
-            for (pos = 0; pos < NUM_USERS; pos++)
-            {
-                const BYTE *stored_uid = USER_GetUserByPosition(pos);
-                if (stored_uid)
-                {
-                    EEPROM_ReadConfigForUser(pos, current_config);
-                    format_uid((BYTE *)stored_uid);
-                    SIO_SendStoredConfig(uid_buffer, current_config);
-                }
-            }
+            state = SERIAL_SEND_CONFIGS;
             break;
 
         case CMD_UPDATE_TIME:
             SIO_SendTimePrompt();
-            state = ST_UPDATE_TIME_WAIT;
-            return;
+            state = SERIAL_WAIT_TIME_INPUT;
+            break;
 
         case CMD_ESC:
             SIO_SendMainMenu();
+            state = INPUT_WAIT_DETECT;
             break;
 
         default:
+            state = INPUT_WAIT_DETECT;
             break;
         }
-
-        state = ST_WAIT_INPUT;
         break;
 
-    case ST_UPDATE_TIME_WAIT:
+    case SERIAL_SEND_WHO_RESPONSE:
+        if (user_inside)
+        {
+            format_uid(current_user_uid);
+            SIO_SendUser(uid_buffer);
+        }
+        else
+        {
+            SIO_SendNoUser();
+        }
+        state = INPUT_WAIT_DETECT;
+        break;
+
+    case SERIAL_SEND_CONFIGS:
+        for (BYTE user = 0; user < NUM_USERS;)
+        {
+            if (EEPROM_ReadConfigForUser(user, current_config))
+            {
+                format_uid(USER_GetUserByPosition(user));
+                SIO_SendStoredConfig(uid_buffer, current_config);
+                user++;
+            }
+        }
+        state = INPUT_WAIT_DETECT;
+        break;
+
+    case SERIAL_WAIT_TIME_INPUT:
         if (SIO_ReadTime(&time_hour, &time_minute))
         {
             HORA_SetTime(time_hour, time_minute);
             LCD_UpdateTime(time_hour, time_minute);
-            state = ST_WAIT_INPUT;
+            state = INPUT_WAIT_DETECT;
         }
-        break; //*/
+        break;
+
+    default:
+        state = INPUT_WAIT_DETECT;
+        break;
     }
 }
 
@@ -218,7 +270,7 @@ void CONTROLLER_Motor(void)
  *        PRIVATE FUNCTION BODIES
  * ======================================= */
 
-static void format_uid(BYTE *uid)
+static void format_uid(const BYTE *uid)
 {
     BYTE pos = 0;
     for (BYTE i = 0; i < UID_SIZE; i++)
@@ -250,4 +302,14 @@ static void reset_system(void)
 static BYTE hex_char(BYTE val)
 {
     return (val < 10) ? ('0' + val) : ('A' + val - 10);
+}
+
+static void clean_config(void)
+{
+    current_config[0] = 0x00;
+    current_config[1] = 0x00;
+    current_config[2] = 0x00;
+    current_config[3] = 0x00;
+    current_config[4] = 0x00;
+    current_config[5] = 0x00;
 }

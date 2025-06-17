@@ -192,7 +192,9 @@ void KEY_Motor(void)
 
 BYTE KEY_GetCommand(void)
 {
-    return command_ready;
+    BYTE cmd = command_ready;
+    command_ready = NO_COMMAND;
+    return cmd;
 }
 
 void KEY_GetUpdateInfo(BYTE *led, BYTE *intensity)

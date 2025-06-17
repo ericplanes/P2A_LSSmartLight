@@ -123,6 +123,7 @@ static BOOL spi_motor(BYTE reg, BYTE data, BOOL read);
 static BOOL comm_motor(BYTE cmd, BYTE *send_data, BYTE send_len);
 static void start_spi(BYTE reg, BYTE data, BOOL read);
 static void start_comm(BYTE cmd, BYTE *send_data, BYTE send_len);
+static void spi_write_blocking(BYTE reg, BYTE data);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -132,6 +133,7 @@ void RFID_Init(void)
 {
   config_pins();
   reset_chip();
+  init_chip();
   state = STATE_INIT;
   card_detected = FALSE;
   uid_pos = 0;
@@ -277,9 +279,15 @@ static void reset_chip(void)
 
 static void init_chip(void)
 {
-  MFRC522_CS = 1;
-  MFRC522_RST = 1;
-  reset_chip();
+  spi_write_blocking(0x2A, 0x8D); // TModeReg
+  spi_write_blocking(0x2B, 0x3E); // TPrescalerReg
+  spi_write_blocking(0x2C, 0x00); // TReloadRegH
+  spi_write_blocking(0x2D, 30);   // TReloadRegL
+  spi_write_blocking(0x15, 0x40); // TxAutoReg
+  spi_write_blocking(0x11, 0x3D); // ModeReg
+
+  // Enable antenna
+  spi_motor(REG_TX_CTRL, 0x03, FALSE);
 }
 
 static BOOL spi_motor(BYTE reg, BYTE data, BOOL read)
@@ -451,5 +459,13 @@ static void start_comm(BYTE cmd, BYTE *send_data, BYTE send_len)
   for (i = 0; i < send_len && i < 16; i++)
   {
     comm_buffer[i] = send_data[i];
+  }
+}
+
+static void spi_write_blocking(BYTE reg, BYTE data)
+{
+  while (!spi_motor(reg, data, FALSE))
+  {
+    // Wait until operation completes
   }
 }
