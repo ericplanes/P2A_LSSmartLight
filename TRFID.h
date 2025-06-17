@@ -5,35 +5,36 @@
 #include <pic18f4321.h>
 #include "Utils.h"
 
-/* Pin out
-SDA (Slave Select): Serial Data (CS)
-SCK: Serial Clock
-MOSI: Master Output Slave Input
-MISO: Master Input Slave Output
-IRQ: Not connected
-GND
-RST: Reset
-3V3: 3V3 from USB to TTL!
-*/
+/* RFID-RC522 Pin Configuration
+ * New pin assignments:
+ * SDA (CS): RC0 - Chip Select (Slave Select)
+ * SCK:      RC1 - Serial Clock
+ * MOSI:     RC2 - Master Output Slave Input
+ * MISO:     RC3 - Master Input Slave Output
+ * IRQ:      Not connected
+ * GND:      Ground
+ * RST:      RD0 - Reset
+ * 3V3:      3V3 power supply
+ */
 
 //------------------------------------------------
-// Constant values (I/O pins) to be defined
+// RFID SPI Pin Definitions (Updated Configuration)
 //-------------------------------------------------
-#define MFRC522_SO PORTCbits.RC0   // input  (Master Input from Slave Output aka MISO)
-#define MFRC522_SI LATCbits.LATC1  // output (Master Output to Slave Input aka MOSI)
-#define MFRC522_SCK LATCbits.LATC2 // output (Serial clock)
-#define MFRC522_CS LATCbits.LATC3  // output (!CS, Slave select)
-#define MFRC522_RST LATCbits.LATC4 // output device reset
+#define MFRC522_SO PORTCbits.RC3   // input  (Master Input from Slave Output - MISO)
+#define MFRC522_SI LATCbits.LATC2  // output (Master Output to Slave Input - MOSI)
+#define MFRC522_SCK LATCbits.LATC1 // output (Serial Clock)
+#define MFRC522_CS LATCbits.LATC0  // output (Chip Select - SDA pin on RC522 module)
+#define MFRC522_RST LATDbits.LATD0 // output (Reset)
 
-// Directions
-#define DIR_MFRC522_SO TRISCbits.TRISC0  // input  (Master Input from Slave Output aka MISO)
-#define DIR_MFRC522_SI TRISCbits.TRISC1  // output (Master Output to Slave Input aka MOSI)
-#define DIR_MFRC522_SCK TRISCbits.TRISC2 // output (Serial clock)
-#define DIR_MFRC522_CS TRISCbits.TRISC3  // output (!CS, Slave select)
-#define DIR_MFRC522_RST TRISCbits.TRISC4 // output device reset
+// Pin Direction Configuration
+#define DIR_MFRC522_SO TRISCbits.TRISC3  // input  (MISO)
+#define DIR_MFRC522_SI TRISCbits.TRISC2  // output (MOSI)
+#define DIR_MFRC522_SCK TRISCbits.TRISC1 // output (Serial Clock)
+#define DIR_MFRC522_CS TRISCbits.TRISC0  // output (Chip Select)
+#define DIR_MFRC522_RST TRISDbits.TRISD0 // output (Reset)
 
 //------------------------------------------------
-// End constant values
+// End pin definitions
 //-------------------------------------------------
 
 // Commands for PCD (Proximity Coupling Device)
