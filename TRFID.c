@@ -1,4 +1,5 @@
 #include "TRFID.h"
+#include "TTimer.h"
 
 /* =======================================
  *              CONSTANTS
@@ -94,8 +95,8 @@ void RFID_Init(void)
   current_rfid_state = STATE_RFID_INIT;
   user_card_detected = FALSE;
   uid_transfer_position = 0;
-  TI_NewTimer(&rfid_timer_handle);
-  TI_ResetTics(rfid_timer_handle);
+  TiNewTimer(&rfid_timer_handle);
+  TiResetTics(rfid_timer_handle);
 }
 
 void RFID_Motor(void)
@@ -205,12 +206,12 @@ void RFID_Motor(void)
       store_detected_uid(detected_uid);
     }
     halt_card_communication();
-    TI_ResetTics(rfid_timer_handle);
+    TiResetTics(rfid_timer_handle);
     current_rfid_state = STATE_RFID_WAIT_TIMEOUT;
     break;
 
   case STATE_RFID_WAIT_TIMEOUT:
-    if (TI_GetTics(rfid_timer_handle) >= CARD_DETECTION_DELAY_MS)
+    if (TiGetTics(rfid_timer_handle) >= CARD_DETECTION_DELAY_MS)
       current_rfid_state = STATE_RFID_INIT;
     break;
 
@@ -279,7 +280,7 @@ static BYTE read_mfrc522_register(BYTE register_address)
   for (bit_counter = 0; bit_counter < SPI_BITS_PER_BYTE; bit_counter++)
   {
     MFRC522_SCK = 1;
-    read_result = (read_result << 1) | (MFRC522_SO ? 1 : 0);
+    read_result = (BYTE)((read_result << 1) | (MFRC522_SO ? 1 : 0));
     MFRC522_SCK = 0;
   }
 
