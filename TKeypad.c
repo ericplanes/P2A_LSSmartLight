@@ -208,9 +208,7 @@ void KEY_Motor(void)
 
 BYTE KEY_GetCommand(void)
 {
-    BYTE result = command_ready;
-    command_ready = NO_COMMAND;
-    return result;
+    return command_ready;
 }
 
 void KEY_GetUpdateInfo(BYTE *led, BYTE *intensity)
@@ -228,9 +226,9 @@ void KEY_SetUserInside(BOOL inside)
     user_inside = inside;
 }
 
-void KEY_Reset(void)
+void KEY_ResetCommand(void)
 {
-    reset_internal_state();
+    command_ready = NO_COMMAND;
 }
 
 /* =======================================
