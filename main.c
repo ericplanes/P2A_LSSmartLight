@@ -10,6 +10,7 @@
 #include "TSerial.h"
 #include "TLight.h"
 #include "TUserControl.h"
+#include "TRFID.h"
 
 // Configuration bits
 #pragma config OSC = INTIO2
@@ -51,6 +52,7 @@ void main(void)
     LCD_Init();    // LCD display
     KEY_Init();    // Keypad input
     HORA_Init();   // Time management
+    RFID_Init();   // RFID card reader
 
     // Main cooperative loop
     while (TRUE)
@@ -59,6 +61,7 @@ void main(void)
         LED_Motor();  // Update PWM light control
         KEY_Motor();  // Process keypad input
         HORA_Motor(); // Update time management
+        RFID_Motor(); // Update RFID motor
 
         // Additional motors can be added here when RFID and Controller modules are ready
         // RFID_Motor();

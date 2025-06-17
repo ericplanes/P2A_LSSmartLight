@@ -37,7 +37,7 @@ BYTE USER_FindPositionByRFID(BYTE *rfid_uid)
     return USER_NOT_FOUND;
 }
 
-BYTE USER_GetUserByPosition(BYTE position)
+BYTE *USER_GetUserByPosition(BYTE position)
 {
     if (position < NUM_USERS)
     {

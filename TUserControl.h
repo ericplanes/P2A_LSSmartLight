@@ -19,7 +19,7 @@ BYTE USER_FindPositionByRFID(BYTE *rfid_uid);
 // Pre: rfid_uid points to 5-byte UID array
 // Post: If UID found, returns user position (0-N), else returns USER_NOT_FOUND
 
-BYTE USER_GetUserByPosition(BYTE position);
+BYTE *USER_GetUserByPosition(BYTE position);
 // Pre: position is a valid user position (0-N)
 // Post: Returns user position (0-N), else returns USER_NOT_FOUND
 
