@@ -58,7 +58,7 @@ static BYTE user_pos;
  *       PRIVATE FUNCTION HEADERS
  * ======================================= */
 
-static void format_uid(BYTE *uid);
+static void format_uid(const BYTE *uid);
 static void reset_system(void);
 static BYTE hex_char(BYTE val);
 static void clean_config(void);
@@ -270,7 +270,7 @@ void CONTROLLER_Motor(void)
  *        PRIVATE FUNCTION BODIES
  * ======================================= */
 
-static void format_uid(BYTE *uid)
+static void format_uid(const BYTE *uid)
 {
     BYTE pos = 0;
     for (BYTE i = 0; i < UID_SIZE; i++)
