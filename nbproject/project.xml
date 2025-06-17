@@ -6,6 +6,7 @@
             <name>P2A_LSSmartLight</name>
             <creation-uuid>617d82da-d2f3-4417-bb12-778f90c2691f</creation-uuid>
             <make-project-type>0</make-project-type>
+            <sourceEncoding>ISO-8859-1</sourceEncoding>
             <make-dep-projects/>
             <sourceRootList/>
             <confList>
@@ -14,7 +15,6 @@
                     <type>2</type>
                 </confElem>
             </confList>
-            <sourceEncoding>ISO-8859-1</sourceEncoding>
             <formatting>
                 <project-formatting-style>false</project-formatting-style>
             </formatting>

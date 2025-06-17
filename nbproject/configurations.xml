@@ -114,9 +114,6 @@
         <property key="verbose" value="false"/>
         <property key="warning-level" value="-3"/>
         <property key="what-to-do" value="ignore"/>
-        <property key="enable-omit-frame-pointer" value="true"/>
-        <property key="enable-symbols" value="false"/>
-        <property key="enable-unroll-loops" value="true"/>
       </HI-TECH-COMP>
       <HI-TECH-LINK>
         <property key="additional-options-checksum" value=""/>
@@ -177,7 +174,6 @@
         <property key="opt-xc8-linker-serial" value=""/>
         <property key="program-the-device-with-default-config-words" value="false"/>
         <property key="remove-unused-sections" value="true"/>
-        <property key="additional-options-command-line" value="--opt=default,+asm,+asmfile,+speed,+space,+debug,-local --double=24 --float=24 --Wl,--gc-sections --Wl,--relax"/>
       </HI-TECH-LINK>
       <XC8-CO>
         <property key="coverage-enable" value=""/>
@@ -200,9 +196,6 @@
         <property key="stack-type" value="compiled"/>
         <property key="user-pack-device-support" value=""/>
         <property key="wpo-lto" value="false"/>
-        <property key="enable-short-float" value="false"/>
-        <property key="enable-short-double" value="false"/>
-        <property key="enable-pack-struct" value="true"/>
       </XC8-config-global>
     </conf>
   </confs>
