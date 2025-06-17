@@ -6,25 +6,31 @@
  *           HARDWARE CONFIGURATION
  * ======================================= */
 
-// Data pins control macros
+// New LCD pin assignments:
+// Control pins: RS->RD5, RW->RD6, E->RD7
+// Data pins: D4->RB0, D5->RB1, D6->RB2, D7->RB3
+
+// Data pins control macros (RB0-RB3, unchanged)
 #define set_data_pins_output() (TRISBbits.TRISB0 = TRISBbits.TRISB1 = TRISBbits.TRISB2 = TRISBbits.TRISB3 = 0)
 #define set_data_pins_input() (TRISBbits.TRISB0 = TRISBbits.TRISB1 = TRISBbits.TRISB2 = TRISBbits.TRISB3 = 1)
-#define set_control_pins_output() (TRISBbits.TRISB4 = 0, TRISCbits.TRISC5 = 0, TRISDbits.TRISD7 = 0)
 
-// Individual data bit control
+// Control pins configuration (updated to RD5, RD6, RD7)
+#define set_control_pins_output() (TRISDbits.TRISD5 = 0, TRISDbits.TRISD6 = 0, TRISDbits.TRISD7 = 0)
+
+// Individual data bit control (RB0-RB3, unchanged)
 #define set_data_bit_4(state) (LATBbits.LATB0 = (state))
 #define set_data_bit_5(state) (LATBbits.LATB1 = (state))
 #define set_data_bit_6(state) (LATBbits.LATB2 = (state))
 #define set_data_bit_7(state) (LATBbits.LATB3 = (state))
 
-// Control pins
-#define get_busy_flag() (PORTBbits.RB3)
-#define set_register_select_high() (LATBbits.LATB4 = 1)
-#define set_register_select_low() (LATBbits.LATB4 = 0)
-#define set_read_write_high() (LATCbits.LATC5 = 1)
-#define set_read_write_low() (LATCbits.LATC5 = 0)
-#define set_enable_high() (LATDbits.LATD7 = 1)
-#define set_enable_low() (LATDbits.LATD7 = 0)
+// Control pins (updated to use RD5, RD6, RD7)
+#define get_busy_flag() (PORTBbits.RB3)                 // D7 data line for busy flag
+#define set_register_select_high() (LATDbits.LATD5 = 1) // RS -> RD5
+#define set_register_select_low() (LATDbits.LATD5 = 0)  // RS -> RD5
+#define set_read_write_high() (LATDbits.LATD6 = 1)      // RW -> RD6
+#define set_read_write_low() (LATDbits.LATD6 = 0)       // RW -> RD6
+#define set_enable_high() (LATDbits.LATD7 = 1)          // E -> RD7 (unchanged)
+#define set_enable_low() (LATDbits.LATD7 = 0)           // E -> RD7 (unchanged)
 
 /* =======================================
  *           LCD COMMAND CONSTANTS
@@ -90,6 +96,8 @@ void LCD_Init(void)
     current_column = 0;
 
     // Configure hardware pins
+    // Control pins: RS->RD5, RW->RD6, E->RD7
+    // Data pins: D4->RB0, D5->RB1, D6->RB2, D7->RB3
     set_control_pins_output();
     set_data_pins_output();
 
@@ -140,6 +148,11 @@ void LCD_Init(void)
     // After double initialization, LCD is fully ready for busy flag usage
 }
 
+void LCD_Reset(void)
+{
+    LCD_Init();
+}
+
 void LCD_WriteNoUserInfo(void)
 {
     // Clear display
@@ -180,6 +193,13 @@ void LCD_WriteUserInfo(BYTE last_uid_char, BYTE *light_config)
     // Write user character
     write_character(last_uid_char);
     write_character(' ');
+
+    // Write current system time
+    write_character((current_hour / 10) + '0');
+    write_character((current_hour % 10) + '0');
+    write_character(':');
+    write_character((current_minute / 10) + '0');
+    write_character((current_minute % 10) + '0');
 
     // Update light configuration
     LCD_UpdateLightConfig(light_config);
