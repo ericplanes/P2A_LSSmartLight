@@ -13,8 +13,8 @@
  * - HD44780-compatible LCD display (2x16 characters)
  * - 4-bit data interface
  * - Pin assignments:
- *   * RS (Register Select) -> RB4
- *   * RW (Read/Write)      -> RC5
+ *   * RS (Register Select) -> RD5
+ *   * RW (Read/Write)      -> RD6
  *   * E  (Enable)          -> RD7
  *   * D4-D7 (Data lines)   -> RB0-RB3
  *
@@ -41,6 +41,9 @@
 void LCD_Init(void);
 // Pre: TTimer module initialized
 // Post: LCD ready for use (takes ~300ms)
+
+void LCD_Reset(void);
+// Post: Reinitializes LCD completely, equivalent to LCD_Init()
 
 void LCD_WriteNoUserInfo(void);
 // Post: Display shows "no user" state with current system time

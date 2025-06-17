@@ -6,6 +6,26 @@
 #include "Utils.h"
 
 /* =======================================
+ *           TSERIAL MODULE
+ * ======================================= */
+/*
+ * HARDWARE CONFIGURATION:
+ * - UART communication at 9600 baud
+ * - Pin assignments:
+ *   * TX: RC6 - Transmit data to PC
+ *   * RX: RC7 - Receive data from PC
+ *
+ * COMMUNICATION PROTOCOL:
+ * - Commands: 1,2,3,ESC from PC keyboard
+ * - Time input: HH:MM format
+ * - Various formatted output messages to PC
+ *
+ * DEPENDENCIES:
+ * - PIC18F4321 UART hardware module
+ * - Utils.h for data types
+ */
+
+/* =======================================
  *              CONSTANTS
  * ======================================= */
 

@@ -69,4 +69,5 @@ void HORA_SetTime(BYTE hour, BYTE minutes)
 
     // Reset timer when time is manually set
     TiResetTics(TI_HORA);
+    LCD_UpdateTime(current_hour, current_minutes);
 }

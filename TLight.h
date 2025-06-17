@@ -6,6 +6,29 @@
 #include <pic18f4321.h>
 
 /* =======================================
+ *           TLIGHT MODULE
+ * ======================================= */
+/*
+ * HARDWARE CONFIGURATION:
+ * - 6 LEDs controlled via PWM at 50Hz
+ * - Pin assignments:
+ *   * LED0 -> RD1
+ *   * LED1 -> RD2
+ *   * LED2 -> RD3
+ *   * LED3 -> RC4
+ *   * LED4 -> RC5
+ *   * LED5 -> RD4
+ *
+ * INTENSITY LEVELS:
+ * - 0: LED OFF (0% brightness)
+ * - 1-9: Variable brightness (10%-90%)
+ * - 10: LED fully ON (100% brightness)
+ *
+ * DEPENDENCIES:
+ * - TTimer module (uses TI_LIGHTS timer)
+ */
+
+/* =======================================
  *         PUBLIC FUNCTION HEADERS
  * ======================================= */
 
