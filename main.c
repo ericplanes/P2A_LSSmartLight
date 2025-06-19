@@ -55,7 +55,7 @@ void main(void)
     RFID_Init();       // RFID card reader
     CONTROLLER_Init(); // Main system controller
 
-    while (!EEPROM_StoreConfigForUser(1, (BYTE[]){0x00, 0x00, 0x00, 0x00, 0x00, 0x00}))
+    while (!EEPROM_StoreConfigForUser(1, (BYTE[]){0, 1, 3, 5, 7, 9}))
         ;
 
     // Main cooperative loop
