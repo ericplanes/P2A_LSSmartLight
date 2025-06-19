@@ -35,8 +35,8 @@
 #define NUM_LEDS 6  // Number of LEDs to control
 
 // LED status
-#define LED_OFF FALSE
-#define LED_ON TRUE
+#define LED_OFF TRUE
+#define LED_ON FALSE
 
 /* =======================================
  *        PRIVATE FUNCTION HEADERS
