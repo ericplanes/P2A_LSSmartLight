@@ -71,6 +71,7 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
         {
             hour_chars[0] = received_char;
             state = TIME_STATE_HOUR_SECOND;
+            send_char(received_char);
         }
         break;
 
@@ -82,6 +83,7 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
             while (!send_char(':'))
                 ;
             state = TIME_STATE_MIN_FIRST;
+            send_char(received_char);
         }
         break;
 
@@ -90,6 +92,7 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
         {
             min_chars[0] = received_char;
             state = TIME_STATE_MIN_SECOND;
+            send_char(received_char);
         }
         break;
 
@@ -102,6 +105,9 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
 
             // Reset state for next time
             state = TIME_STATE_HOUR_FIRST;
+            send_char(received_char);
+            clear_before_new_message();
+            send_string((BYTE *)"Time updated successfully.\r\n");
             return TRUE;
         }
         break;
