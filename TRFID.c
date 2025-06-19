@@ -76,7 +76,7 @@
 #define DELAY_MS 300
 
 #define FIFO_SIZE 16
-#define UID_BYTES 4
+#define UID_BYTES 5
 #define UID_SIZE 5
 
 #define IRQ_MASK_01 0x01
