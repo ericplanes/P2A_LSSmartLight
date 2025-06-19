@@ -21,6 +21,9 @@ static const BYTE msg_main_menu[] = "---------------\r\nMain Menu\r\n-----------
 // Buffer for UID formatting
 static BYTE uid_buffer[15]; // 5 bytes * 2 chars + 4 dashes + null terminator
 
+// Buffer for config formatting
+static BYTE config_buffer[40]; // "L0: 0 - L1: 3 - L2: 9 - L3: A - L4: 0 - L5: 9" + null terminator
+
 /* =======================================
  *        PRIVATE FUNCTION HEADERS
  * ======================================= */
@@ -29,6 +32,7 @@ static BOOL send_char(BYTE character);
 static void send_string(BYTE *string);
 static void clear_before_new_message(void);
 static void format_uid(const BYTE *uid, BYTE *uid_buffer);
+static void format_config(const BYTE *config, BYTE *config_buffer);
 static BYTE hex_char(BYTE val);
 
 /* =======================================
@@ -138,24 +142,14 @@ BYTE SIO_ReadCommand(void)
 
 void SIO_SendDetectedCard(const BYTE *uid_bytes, const BYTE *config)
 {
-    BYTE i;
-
     format_uid(uid_bytes, uid_buffer);
+    format_config(config, config_buffer);
 
     clear_before_new_message();
     send_string((BYTE *)"Card detected!\r\nUID: ");
     send_string(uid_buffer);
     send_string((BYTE *)msg_crlf);
-    send_string((BYTE *)"L0: ");
-    send_char(config[0] + '0');
-
-    for (i = 1; i < 6; i++)
-    {
-        send_string((BYTE *)" - L");
-        send_char(i + '0');
-        send_string((BYTE *)": ");
-        send_char((config[i] == 10) ? 'A' : (config[i] + '0'));
-    }
+    send_string(config_buffer);
     send_string((BYTE *)msg_crlf);
 }
 
@@ -183,23 +177,14 @@ void SIO_SendNoUser(void)
 
 void SIO_SendStoredConfig(const BYTE *uid_bytes, const BYTE *config)
 {
-    BYTE i;
-
     format_uid(uid_bytes, uid_buffer);
+    format_config(config, config_buffer);
 
     clear_before_new_message();
     send_string((BYTE *)"UID: ");
     send_string(uid_buffer);
-    send_string((BYTE *)" -> L0: ");
-    send_char(config[0] + '0');
-
-    for (i = 1; i < 6; i++)
-    {
-        send_string((BYTE *)" - L");
-        send_char(i + '0');
-        send_string((BYTE *)": ");
-        send_char((config[i] == 10) ? 'A' : (config[i] + '0'));
-    }
+    send_string((BYTE *)" -> ");
+    send_string(config_buffer);
     send_string((BYTE *)msg_crlf);
 }
 
@@ -260,6 +245,27 @@ static void format_uid(const BYTE *uid, BYTE *uid_buffer)
             uid_buffer[pos++] = '-';
     }
     uid_buffer[pos] = '\0';
+}
+
+static void format_config(const BYTE *config, BYTE *config_buffer)
+{
+    BYTE pos = 0;
+    for (BYTE i = 0; i < 6; i++) // 6 LEDs
+    {
+        if (i > 0)
+        {
+            config_buffer[pos++] = ' ';
+            config_buffer[pos++] = '-';
+            config_buffer[pos++] = ' ';
+        }
+
+        config_buffer[pos++] = 'L';
+        config_buffer[pos++] = i + '0';
+        config_buffer[pos++] = ':';
+        config_buffer[pos++] = ' ';
+        config_buffer[pos++] = (config[i] == 10) ? 'A' : (config[i] + '0');
+    }
+    config_buffer[pos] = '\0';
 }
 
 static BYTE hex_char(BYTE val)
