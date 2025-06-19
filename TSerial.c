@@ -169,7 +169,7 @@ void SIO_SendUser(const BYTE *uid_bytes)
 {
     format_uid(uid_bytes, uid_buffer);
 
-    clear_before_new_message();
+    send_string((BYTE *)msg_crlf);
     send_string((BYTE *)"Current user: UID ");
     send_string(uid_buffer);
     send_string((BYTE *)msg_crlf);
