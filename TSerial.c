@@ -24,6 +24,7 @@ static const BYTE msg_main_menu[] = "---------------\r\nMain Menu\r\n-----------
 
 static BOOL send_char(BYTE character);
 static void send_string(BYTE *string);
+static void clear_before_new_message(void);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -134,7 +135,7 @@ void SIO_SendDetectedCard(BYTE *UID, BYTE *config)
 {
     BYTE i;
 
-    send_string((BYTE *)msg_crlf);
+    clear_before_new_message();
     send_string((BYTE *)"Card detected!\r\nUID: ");
     send_string(UID);
     send_string((BYTE *)msg_crlf);
@@ -153,13 +154,13 @@ void SIO_SendDetectedCard(BYTE *UID, BYTE *config)
 
 void SIO_SendMainMenu(void)
 {
-    send_string((BYTE *)msg_crlf);
+    clear_before_new_message();
     send_string((BYTE *)msg_main_menu);
 }
 
 void SIO_SendUser(BYTE *User)
 {
-    send_string((BYTE *)msg_crlf);
+    clear_before_new_message();
     send_string((BYTE *)"Current user: UID ");
     send_string(User);
     send_string((BYTE *)msg_crlf);
@@ -167,7 +168,7 @@ void SIO_SendUser(BYTE *User)
 
 void SIO_SendNoUser(void)
 {
-    send_string((BYTE *)msg_crlf);
+    clear_before_new_message();
     send_string((BYTE *)"No one in the room.\r\n");
 }
 
@@ -175,7 +176,7 @@ void SIO_SendStoredConfig(BYTE *UID, BYTE *config)
 {
     BYTE i;
 
-    send_string((BYTE *)msg_crlf);
+    clear_before_new_message();
     send_string((BYTE *)"UID: ");
     send_string(UID);
     send_string((BYTE *)" -> L0: ");
@@ -193,13 +194,13 @@ void SIO_SendStoredConfig(BYTE *UID, BYTE *config)
 
 void SIO_SendTimePrompt(void)
 {
-    send_string((BYTE *)msg_crlf);
+    clear_before_new_message();
     send_string((BYTE *)"Enter new time (HH:MM): ");
 }
 
 void SIO_SendUnknownCard(BYTE *UID)
 {
-    send_string((BYTE *)msg_crlf);
+    clear_before_new_message();
     send_string((BYTE *)"Card detected!\r\nUnknown UID: ");
     send_string(UID);
     send_string((BYTE *)"\r\nCard not recognized. Ignored.\r\n");
@@ -227,4 +228,10 @@ static void send_string(BYTE *string)
             ;
         i++;
     }
+}
+
+static void clear_before_new_message(void)
+{
+    send_string((BYTE *)msg_crlf);
+    send_string((BYTE *)msg_crlf);
 }
