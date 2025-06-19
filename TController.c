@@ -58,6 +58,7 @@ static BYTE user_pos;
 
 static void reset_system(void);
 static void clean_config(void);
+static BYTE get_last_uid_char(const BYTE *uid);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -131,7 +132,7 @@ void CONTROLLER_Motor(void)
         if (EEPROM_StoreConfigForUser(current_user_position, current_config))
         {
             LED_UpdateConfig(current_config);
-            LCD_WriteUserInfo(current_user_uid[4], current_config);
+            LCD_WriteUserInfo(get_last_uid_char(current_user_uid), current_config);
             state = INPUT_WAIT_DETECT;
         }
         break;
@@ -173,7 +174,7 @@ void CONTROLLER_Motor(void)
         {
             LED_UpdateConfig(current_config);
             SIO_SendDetectedCard(current_user_uid, current_config);
-            LCD_WriteUserInfo(current_user_uid[4], current_config);
+            LCD_WriteUserInfo(get_last_uid_char(current_user_uid), current_config);
             state = INPUT_WAIT_DETECT;
         }
         break;
@@ -285,4 +286,14 @@ static void clean_config(void)
     current_config[3] = 0x00;
     current_config[4] = 0x00;
     current_config[5] = 0x00;
+}
+
+static BYTE get_last_uid_char(const BYTE *uid)
+{
+    // Get the last hex character from the last byte of the UID
+    BYTE last_byte = uid[4];             // Last byte of 5-byte UID
+    BYTE last_nibble = last_byte & 0x0F; // Extract lower nibble (last hex digit)
+
+    // Convert to ASCII character
+    return (last_nibble < 10) ? ('0' + last_nibble) : ('A' + last_nibble - 10);
 }
