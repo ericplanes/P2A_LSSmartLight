@@ -13,43 +13,44 @@
 // Columns (inputs): C0=A2, C1=A0, C2=A4
 // Rows (outputs):   F0=A1, F1=A6, F2=A5, F3=A3
 
-// Hardware configuration defines
-#define TRISA_KEYPAD_ROWS 0x59 // A0,A2,A4 as inputs (columns), A1,A3,A5,A6 as outputs (rows)
-                               // Binary: 01011001 (bits 0,2,4,6 inputs, bits 1,3,5,7 outputs)
-                               // Wait, that's wrong. Let me fix this
-
-// Actually, let me recalculate:
-// A0: C1 (input)   -> bit 0 = 1
-// A1: F0 (output)  -> bit 1 = 0
-// A2: C0 (input)   -> bit 2 = 1
-// A3: F3 (output)  -> bit 3 = 0
-// A4: C2 (input)   -> bit 4 = 1
-// A5: F2 (output)  -> bit 5 = 0
-// A6: F1 (output)  -> bit 6 = 0
+// Hardware configuration defines - SCANNING COLUMNS
+// A0: C1 (output)  -> bit 0 = 0
+// A1: F0 (input)   -> bit 1 = 1
+// A2: C0 (output)  -> bit 2 = 0
+// A3: F3 (input)   -> bit 3 = 1
+// A4: C2 (output)  -> bit 4 = 0
+// A5: F2 (input)   -> bit 5 = 1
+// A6: F1 (input)   -> bit 6 = 1
 // A7: unused       -> bit 7 = 1 (input for safety)
-#define TRISA_KEYPAD_CONFIG 0x95 // A0,A2,A4,A7 as inputs (columns+safety), A1,A3,A5,A6 as outputs (rows)
+#define TRISA_KEYPAD_CONFIG 0xEA // A1,A3,A5,A6,A7 as inputs (rows+safety), A0,A2,A4 as outputs (columns)
 
-// Column pin masks (inputs)
-#define COL0_PIN_MASK 0x04 // A2 (C0)
-#define COL1_PIN_MASK 0x01 // A0 (C1)
-#define COL2_PIN_MASK 0x10 // A4 (C2)
-#define COLUMNS_MASK (COL0_PIN_MASK | COL1_PIN_MASK | COL2_PIN_MASK)
+// Column pin positions (outputs - for scanning)
+#define COL0_PIN 0x04 // A2 (C0)
+#define COL1_PIN 0x01 // A0 (C1)
+#define COL2_PIN 0x10 // A4 (C2)
+#define COLUMNS_MASK (COL0_PIN | COL1_PIN | COL2_PIN)
 
-// Row pin positions (outputs)
-#define ROW0_PIN 0x02 // A1 (F0)
-#define ROW1_PIN 0x40 // A6 (F1)
-#define ROW2_PIN 0x20 // A5 (F2)
-#define ROW3_PIN 0x08 // A3 (F3)
-#define ROWS_MASK (ROW0_PIN | ROW1_PIN | ROW2_PIN | ROW3_PIN)
+// Row pin masks (inputs - for reading)
+#define ROW0_PIN_MASK 0x02 // A1 (F0)
+#define ROW1_PIN_MASK 0x40 // A6 (F1)
+#define ROW2_PIN_MASK 0x20 // A5 (F2)
+#define ROW3_PIN_MASK 0x08 // A3 (F3)
+#define ROWS_MASK (ROW0_PIN_MASK | ROW1_PIN_MASK | ROW2_PIN_MASK | ROW3_PIN_MASK)
 
 // Keypad dimensions
 #define KEYPAD_ROWS 4
 #define KEYPAD_COLS 3
 
-// Column indices
+// Column indices (for scanning)
 #define COL0_INDEX 0 // C0 -> A2
 #define COL1_INDEX 1 // C1 -> A0
 #define COL2_INDEX 2 // C2 -> A4
+
+// Row indices (for reading)
+#define ROW0_INDEX 0 // F0 -> A1
+#define ROW1_INDEX 1 // F1 -> A6
+#define ROW2_INDEX 2 // F2 -> A5
+#define ROW3_INDEX 3 // F3 -> A3
 
 // LED limits
 #define MIN_LED_NUMBER 0
@@ -67,7 +68,7 @@
 static BYTE keypad_state = STATE_IDLE;
 static BYTE current_key = NO_KEY_PRESSED;
 static BYTE old_key = NO_KEY_PRESSED;
-static BYTE row_index = 0;
+static BYTE col_index = 0;
 static BYTE command_ready = NO_COMMAND;
 static BYTE led_number = 0;
 static BYTE led_intensity = 0;
@@ -94,12 +95,12 @@ static void reset_internal_state(void);
 void KEY_Init(void)
 {
     // Initialize keypad hardware on PORT A
-    // A0,A2,A4,A7 as inputs (columns + safety)
-    // A1,A3,A5,A6 as outputs (rows)
+    // A1,A3,A5,A6,A7 as inputs (rows + safety)
+    // A0,A2,A4 as outputs (columns)
     TRISA = TRISA_KEYPAD_CONFIG;
 
-    // Set all row pins HIGH initially (inactive state)
-    LATA |= ROWS_MASK;
+    // Set all column pins HIGH initially (inactive state)
+    LATA |= COLUMNS_MASK;
 
     // Reset internal state
     reset_internal_state();
@@ -223,66 +224,68 @@ void KEY_ResetCommand(void)
 
 static void scan_keypad(void)
 {
-    BYTE current_row_pin;
+    BYTE current_col_pin;
 
-    // Cycle through rows (F0, F1, F2, F3)
-    row_index = (row_index + 1) % KEYPAD_ROWS;
+    // Cycle through columns (C0, C1, C2)
+    col_index = (col_index + 1) % KEYPAD_COLS;
 
-    // Calculate row pin inline to save memory
-    switch (row_index)
+    // Calculate column pin inline to save memory
+    switch (col_index)
     {
-    case 0:
-        current_row_pin = ROW0_PIN;
+    case COL0_INDEX:
+        current_col_pin = COL0_PIN;
         break;
-    case 1:
-        current_row_pin = ROW1_PIN;
-        break;
-    case 2:
-        current_row_pin = ROW2_PIN;
+    case COL1_INDEX:
+        current_col_pin = COL1_PIN;
         break;
     default:
-        current_row_pin = ROW3_PIN;
+        current_col_pin = COL2_PIN;
         break;
     }
 
-    // Set all row pins HIGH first (inactive)
-    LATA |= ROWS_MASK;
+    // Set all column pins HIGH first (inactive)
+    LATA |= COLUMNS_MASK;
 
-    // Set current row pin LOW to activate it
-    LATA &= ~current_row_pin;
+    // Set current column pin LOW to activate it
+    LATA &= ~current_col_pin;
 }
 
 static BYTE is_key_pressed(void)
 {
-    // Check if any column pin is LOW (pressed key pulls column down)
-    // When a key is pressed, the active row (LOW) connects to the column
-    return (PORTA & COLUMNS_MASK) != COLUMNS_MASK;
+    // Check if any row pin is LOW (pressed key pulls row down)
+    // When a key is pressed, the active column (LOW) connects to the row
+    return (PORTA & ROWS_MASK) != ROWS_MASK;
 }
 
 static BYTE convert_to_key(void)
 {
-    BYTE columns_state = PORTA & COLUMNS_MASK;
-    BYTE col_index;
+    BYTE rows_state = PORTA & ROWS_MASK;
+    BYTE row_index;
 
-    // Determine which column is pressed (LOW)
-    if (!(columns_state & COL0_PIN_MASK)) // C0 (A2) is LOW
+    // Determine which row is pressed (LOW)
+    if (!(rows_state & ROW0_PIN_MASK)) // F0 (A1) is LOW
     {
-        col_index = COL0_INDEX;
+        row_index = ROW0_INDEX;
     }
-    else if (!(columns_state & COL1_PIN_MASK)) // C1 (A0) is LOW
+    else if (!(rows_state & ROW1_PIN_MASK)) // F1 (A6) is LOW
     {
-        col_index = COL1_INDEX;
+        row_index = ROW1_INDEX;
     }
-    else if (!(columns_state & COL2_PIN_MASK)) // C2 (A4) is LOW
+    else if (!(rows_state & ROW2_PIN_MASK)) // F2 (A5) is LOW
     {
-        col_index = COL2_INDEX;
+        row_index = ROW2_INDEX;
+    }
+    else if (!(rows_state & ROW3_PIN_MASK)) // F3 (A3) is LOW
+    {
+        row_index = ROW3_INDEX;
     }
     else
     {
-        return NO_KEY_PRESSED; // No valid column detected
+        return NO_KEY_PRESSED; // No valid row detected
     }
 
     // Calculate key value inline to save memory
+    // col_index tells us which column is currently active
     if (row_index == 3) // Bottom row: *, 0, #
     {
         if (col_index == 0)
@@ -333,7 +336,7 @@ static void reset_internal_state(void)
     keypad_state = STATE_IDLE;
     current_key = NO_KEY_PRESSED;
     old_key = NO_KEY_PRESSED;
-    row_index = 0;
+    col_index = 0;
     command_ready = NO_COMMAND;
     led_number = 0;
     led_intensity = 0;
