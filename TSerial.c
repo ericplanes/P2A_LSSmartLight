@@ -18,6 +18,9 @@
 static const BYTE msg_crlf[] = "\r\n";
 static const BYTE msg_main_menu[] = "---------------\r\nMain Menu\r\n---------------\r\nChoose:\r\n1.Who in room?\r\n2.Show configs\r\n3.Modify time\r\nOption: ";
 
+// Buffer for UID formatting
+static BYTE uid_buffer[15]; // 5 bytes * 2 chars + 4 dashes + null terminator
+
 /* =======================================
  *        PRIVATE FUNCTION HEADERS
  * ======================================= */
@@ -25,6 +28,8 @@ static const BYTE msg_main_menu[] = "---------------\r\nMain Menu\r\n-----------
 static BOOL send_char(BYTE character);
 static void send_string(BYTE *string);
 static void clear_before_new_message(void);
+static void format_uid(const BYTE *uid, BYTE *uid_buffer);
+static BYTE hex_char(BYTE val);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -131,13 +136,15 @@ BYTE SIO_ReadCommand(void)
     }
 }
 
-void SIO_SendDetectedCard(BYTE *UID, BYTE *config)
+void SIO_SendDetectedCard(const BYTE *uid_bytes, const BYTE *config)
 {
     BYTE i;
 
+    format_uid(uid_bytes, uid_buffer);
+
     clear_before_new_message();
     send_string((BYTE *)"Card detected!\r\nUID: ");
-    send_string(UID);
+    send_string(uid_buffer);
     send_string((BYTE *)msg_crlf);
     send_string((BYTE *)"L0: ");
     send_char(config[0] + '0');
@@ -158,11 +165,13 @@ void SIO_SendMainMenu(void)
     send_string((BYTE *)msg_main_menu);
 }
 
-void SIO_SendUser(BYTE *User)
+void SIO_SendUser(const BYTE *uid_bytes)
 {
+    format_uid(uid_bytes, uid_buffer);
+
     clear_before_new_message();
     send_string((BYTE *)"Current user: UID ");
-    send_string(User);
+    send_string(uid_buffer);
     send_string((BYTE *)msg_crlf);
 }
 
@@ -172,13 +181,15 @@ void SIO_SendNoUser(void)
     send_string((BYTE *)"No one in the room.\r\n");
 }
 
-void SIO_SendStoredConfig(BYTE *UID, BYTE *config)
+void SIO_SendStoredConfig(const BYTE *uid_bytes, const BYTE *config)
 {
     BYTE i;
 
+    format_uid(uid_bytes, uid_buffer);
+
     clear_before_new_message();
     send_string((BYTE *)"UID: ");
-    send_string(UID);
+    send_string(uid_buffer);
     send_string((BYTE *)" -> L0: ");
     send_char(config[0] + '0');
 
@@ -198,11 +209,13 @@ void SIO_SendTimePrompt(void)
     send_string((BYTE *)"Enter new time (HH:MM): ");
 }
 
-void SIO_SendUnknownCard(BYTE *UID)
+void SIO_SendUnknownCard(const BYTE *uid_bytes)
 {
+    format_uid(uid_bytes, uid_buffer);
+
     clear_before_new_message();
     send_string((BYTE *)"Card detected!\r\nUnknown UID: ");
-    send_string(UID);
+    send_string(uid_buffer);
     send_string((BYTE *)"\r\nCard not recognized. Ignored.\r\n");
 }
 
@@ -234,4 +247,22 @@ static void clear_before_new_message(void)
 {
     send_string((BYTE *)msg_crlf);
     send_string((BYTE *)msg_crlf);
+}
+
+static void format_uid(const BYTE *uid, BYTE *uid_buffer)
+{
+    BYTE pos = 0;
+    for (BYTE i = 0; i < 5; i++) // UID_SIZE = 5
+    {
+        uid_buffer[pos++] = hex_char((uid[i] >> 4) & 0x0F);
+        uid_buffer[pos++] = hex_char(uid[i] & 0x0F);
+        if (i < 4) // UID_SIZE - 1
+            uid_buffer[pos++] = '-';
+    }
+    uid_buffer[pos] = '\0';
+}
+
+static BYTE hex_char(BYTE val)
+{
+    return (val < 10) ? ('0' + val) : ('A' + val - 10);
 }

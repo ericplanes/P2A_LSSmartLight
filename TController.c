@@ -14,7 +14,6 @@
  * ======================================= */
 
 #define UID_SIZE 5
-#define UID_STRING_SIZE 15
 #define CONFIG_SIZE 6
 
 /* =======================================
@@ -45,7 +44,6 @@ static BOOL user_inside;
 static BYTE current_user_uid[UID_SIZE];
 static BYTE current_user_position;
 static BYTE current_config[CONFIG_SIZE];
-static BYTE uid_buffer[UID_STRING_SIZE];
 static BYTE time_hour = 0, time_minute = 0;
 
 // Processing variables
@@ -58,9 +56,7 @@ static BYTE user_pos;
  *       PRIVATE FUNCTION HEADERS
  * ======================================= */
 
-static void format_uid(const BYTE *uid);
 static void reset_system(void);
-static BYTE hex_char(BYTE val);
 static void clean_config(void);
 
 /* =======================================
@@ -149,8 +145,7 @@ void CONTROLLER_Motor(void)
         user_pos = USER_FindPositionByRFID(rfid_uid);
         if (user_pos == USER_NOT_FOUND)
         {
-            format_uid(rfid_uid);
-            SIO_SendUnknownCard(uid_buffer);
+            SIO_SendUnknownCard(rfid_uid);
             state = INPUT_WAIT_DETECT; // Done
         }
         else if (user_inside && user_pos == current_user_position)
@@ -177,8 +172,7 @@ void CONTROLLER_Motor(void)
         if (EEPROM_ReadConfigForUser(current_user_position, current_config))
         {
             LED_UpdateConfig(current_config);
-            format_uid(current_user_uid);
-            SIO_SendDetectedCard(uid_buffer, current_config);
+            SIO_SendDetectedCard(current_user_uid, current_config);
             LCD_WriteUserInfo(current_user_uid[4], current_config);
             state = INPUT_WAIT_DETECT;
         }
@@ -189,8 +183,7 @@ void CONTROLLER_Motor(void)
         current_user_position = USER_NOT_FOUND;
         KEY_SetUserInside(FALSE);
 
-        format_uid(current_user_uid);
-        SIO_SendDetectedCard(uid_buffer, current_config);
+        SIO_SendDetectedCard(current_user_uid, current_config);
         LCD_WriteNoUserInfo();
 
         clean_config();
@@ -228,8 +221,7 @@ void CONTROLLER_Motor(void)
     case SERIAL_SEND_WHO_RESPONSE:
         if (user_inside)
         {
-            format_uid(current_user_uid);
-            SIO_SendUser(uid_buffer);
+            SIO_SendUser(current_user_uid);
         }
         else
         {
@@ -243,8 +235,7 @@ void CONTROLLER_Motor(void)
         {
             if (EEPROM_ReadConfigForUser(user, current_config))
             {
-                format_uid(USER_GetUserByPosition(user));
-                SIO_SendStoredConfig(uid_buffer, current_config);
+                SIO_SendStoredConfig(USER_GetUserByPosition(user), current_config);
                 user++;
             }
         }
@@ -270,19 +261,6 @@ void CONTROLLER_Motor(void)
  *        PRIVATE FUNCTION BODIES
  * ======================================= */
 
-static void format_uid(const BYTE *uid)
-{
-    BYTE pos = 0;
-    for (BYTE i = 0; i < UID_SIZE; i++)
-    {
-        uid_buffer[pos++] = hex_char((uid[i] >> 4) & 0x0F);
-        uid_buffer[pos++] = hex_char(uid[i] & 0x0F);
-        if (i < UID_SIZE - 1)
-            uid_buffer[pos++] = '-';
-    }
-    uid_buffer[pos] = '\0';
-}
-
 static void reset_system(void)
 {
     EEPROM_CleanMemory();
@@ -297,11 +275,6 @@ static void reset_system(void)
     LED_UpdateConfig(current_config);
     LCD_WriteNoUserInfo();
     KEY_SetUserInside(FALSE);
-}
-
-static BYTE hex_char(BYTE val)
-{
-    return (val < 10) ? ('0' + val) : ('A' + val - 10);
 }
 
 static void clean_config(void)
