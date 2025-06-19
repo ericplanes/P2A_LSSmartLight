@@ -87,7 +87,7 @@
  * ======================================= */
 
 static BOOL card_detected;
-static BYTE uid[RFID_UID_SIZE] = {0x22, 0x15, 0x2A, 0x85, 0xD1};
+static const BYTE *uid;
 static BYTE uid_pos;
 
 /* =======================================
@@ -98,6 +98,7 @@ void RFID_Init(void)
 {
   card_detected = TRUE;
   uid_pos = 0;
+  uid = accepted_uids[1];
 }
 
 void RFID_Motor(void)
