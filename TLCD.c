@@ -85,6 +85,7 @@ static void write_character(BYTE character);
 static void write_string(const BYTE *string);
 static BYTE hex_to_char(BYTE value);
 static void lcd_init_sequence(void);
+static void update_user_char(BYTE user_char);
 
 /* =======================================
  *          PUBLIC FUNCTIONS
@@ -141,25 +142,11 @@ void LCD_WriteNoUserInfo(void)
 
 void LCD_WriteUserInfo(BYTE last_uid_char, BYTE *light_config)
 {
-    BYTE i;
+    // Update user character (position 0,0)
+    update_user_char(last_uid_char);
 
-    // Clear display
-    send_instruction(LCD_CLEAR_DISPLAY);
-    delay_ms(2);
-
-    // Set cursor to home position
-    set_cursor_position(0, 0);
-
-    // Write user character
-    write_character(last_uid_char);
-    write_character(' ');
-
-    // Write current system time
-    write_character((current_hour / 10) + '0');
-    write_character((current_hour % 10) + '0');
-    write_character(':');
-    write_character((current_minute / 10) + '0');
-    write_character((current_minute % 10) + '0');
+    // Update time (current time is already stored in static variables)
+    LCD_UpdateTime(current_hour, current_minute);
 
     // Update light configuration
     LCD_UpdateLightConfig(light_config);
@@ -212,6 +199,13 @@ void LCD_UpdateLightConfig(BYTE *light_config)
 // NOTE: Two types of timing are used in this module:
 // 1. Long delays (ms): For initialization sequence and clear command (using TTimer)
 // 2. Enable pulse timing: Double function calls ensure sufficient pulse width
+
+void update_user_char(BYTE user_char)
+{
+    // Update only the user character at position (0,0)
+    set_cursor_position(0, 0);
+    write_character(user_char);
+}
 
 static void delay_ms(BYTE milliseconds)
 {
