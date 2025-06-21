@@ -13,44 +13,53 @@
 // Columns (inputs): C0=A2, C1=A0, C2=A4
 // Rows (outputs):   F0=A1, F1=A6, F2=A5, F3=A3
 
-// Hardware configuration defines - SCANNING COLUMNS
-// A0: C1 (output)  -> bit 0 = 0
-// A1: F0 (input)   -> bit 1 = 1
-// A2: C0 (output)  -> bit 2 = 0
-// A3: F3 (input)   -> bit 3 = 1
-// A4: C2 (output)  -> bit 4 = 0
-// A5: F2 (input)   -> bit 5 = 1
-// A6: F1 (input)   -> bit 6 = 1
+// Hardware configuration - ACTIVE HIGH logic (1=active, 0=inactive)
+// Columns = outputs (we control these), Rows = inputs (we read these)
+// A0: C1 (output)  -> bit 0 = 0 (output)
+// A1: F0 (input)   -> bit 1 = 1 (input)
+// A2: C0 (output)  -> bit 2 = 0 (output)
+// A3: F3 (input)   -> bit 3 = 1 (input)
+// A4: C2 (output)  -> bit 4 = 0 (output)
+// A5: F2 (input)   -> bit 5 = 1 (input)
+// A6: F1 (input)   -> bit 6 = 1 (input)
 // A7: unused       -> bit 7 = 1 (input for safety)
-#define TRISA_KEYPAD_CONFIG 0xEA // A1,A3,A5,A6,A7 as inputs (rows+safety), A0,A2,A4 as outputs (columns)
 
-// Column pin positions (outputs - for scanning)
-#define COL0_PIN 0x04 // A2 (C0)
-#define COL1_PIN 0x01 // A0 (C1)
-#define COL2_PIN 0x10 // A4 (C2)
-#define COLUMNS_MASK (COL0_PIN | COL1_PIN | COL2_PIN)
+// Simple pin assignments (easier to understand than hex masks)
+// Column pins (outputs - we set these to scan)
+#define COL0_PIN_BIT 2 // A2
+#define COL1_PIN_BIT 0 // A0
+#define COL2_PIN_BIT 4 // A4
 
-// Row pin masks (inputs - for reading)
-#define ROW0_PIN_MASK 0x02 // A1 (F0)
-#define ROW1_PIN_MASK 0x40 // A6 (F1)
-#define ROW2_PIN_MASK 0x20 // A5 (F2)
-#define ROW3_PIN_MASK 0x08 // A3 (F3)
-#define ROWS_MASK (ROW0_PIN_MASK | ROW1_PIN_MASK | ROW2_PIN_MASK | ROW3_PIN_MASK)
+// Row pins (inputs - we read these to detect key press)
+#define ROW0_PIN_BIT 1 // A1
+#define ROW1_PIN_BIT 6 // A6
+#define ROW2_PIN_BIT 5 // A5
+#define ROW3_PIN_BIT 3 // A3
 
-// Keypad dimensions
+// Pin direction configuration (1=input, 0=output)
+// Binary: 11101010 = 0xEA (A1,A3,A5,A6,A7 inputs, A0,A2,A4 outputs)
+#define TRISA_KEYPAD_CONFIG 0xEA
+
+// Keypad layout
 #define KEYPAD_ROWS 4
 #define KEYPAD_COLS 3
 
-// Column indices (for scanning)
+// Column indices (which column we're currently scanning)
 #define COL0_INDEX 0 // C0 -> A2
 #define COL1_INDEX 1 // C1 -> A0
 #define COL2_INDEX 2 // C2 -> A4
 
-// Row indices (for reading)
+// Row indices (which row we detected as pressed)
 #define ROW0_INDEX 0 // F0 -> A1
 #define ROW1_INDEX 1 // F1 -> A6
 #define ROW2_INDEX 2 // F2 -> A5
 #define ROW3_INDEX 3 // F3 -> A3
+
+// Helper functions to make code more readable (like Java getters/setters)
+static void set_column_active(BYTE col_index);
+static void set_all_columns_inactive(void);
+static BOOL is_row_pressed(BYTE row_bit);
+static BYTE get_pressed_row(void);
 
 // LED limits
 #define MIN_LED_NUMBER 0
@@ -99,8 +108,8 @@ void KEY_Init(void)
     // A0,A2,A4 as outputs (columns)
     TRISA = TRISA_KEYPAD_CONFIG;
 
-    // Set all column pins HIGH initially (inactive state)
-    LATA |= COLUMNS_MASK;
+    // Set all column pins to inactive state (LOW = inactive with new logic)
+    set_all_columns_inactive();
 
     // Reset internal state
     reset_internal_state();
@@ -224,67 +233,34 @@ void KEY_ResetCommand(void)
 
 static void scan_keypad(void)
 {
-    BYTE current_col_pin;
-
     // Cycle through columns (C0, C1, C2)
     col_index = (col_index + 1) % KEYPAD_COLS;
 
-    // Calculate column pin inline to save memory
-    switch (col_index)
-    {
-    case COL0_INDEX:
-        current_col_pin = COL0_PIN;
-        break;
-    case COL1_INDEX:
-        current_col_pin = COL1_PIN;
-        break;
-    default:
-        current_col_pin = COL2_PIN;
-        break;
-    }
+    // First, set all columns to inactive (easier to understand than bit masks)
+    set_all_columns_inactive();
 
-    // Set all column pins HIGH first (inactive)
-    LATA |= COLUMNS_MASK;
-
-    // Set current column pin LOW to activate it
-    LATA &= ~current_col_pin;
+    // Then activate the current column (much clearer than hex operations)
+    set_column_active(col_index);
 }
 
 static BYTE is_key_pressed(void)
 {
-    // Check if any row pin is LOW (pressed key pulls row down)
-    // When a key is pressed, the active column (LOW) connects to the row
-    return (PORTA & ROWS_MASK) != ROWS_MASK;
+    // Check if any row pin is HIGH (pressed key connects active column to row)
+    // ACTIVE HIGH logic: when key pressed, row goes HIGH
+    return get_pressed_row() != NO_KEY_PRESSED;
 }
 
 static BYTE convert_to_key(void)
 {
-    BYTE rows_state = PORTA & ROWS_MASK;
-    BYTE row_index;
+    // Get which row is currently pressed (much simpler than bit operations)
+    BYTE row_index = get_pressed_row();
 
-    // Determine which row is pressed (LOW)
-    if (!(rows_state & ROW0_PIN_MASK)) // F0 (A1) is LOW
-    {
-        row_index = ROW0_INDEX;
-    }
-    else if (!(rows_state & ROW1_PIN_MASK)) // F1 (A6) is LOW
-    {
-        row_index = ROW1_INDEX;
-    }
-    else if (!(rows_state & ROW2_PIN_MASK)) // F2 (A5) is LOW
-    {
-        row_index = ROW2_INDEX;
-    }
-    else if (!(rows_state & ROW3_PIN_MASK)) // F3 (A3) is LOW
-    {
-        row_index = ROW3_INDEX;
-    }
-    else
+    if (row_index == NO_KEY_PRESSED)
     {
         return NO_KEY_PRESSED; // No valid row detected
     }
 
-    // Calculate key value inline to save memory
+    // Calculate key value based on row and column
     // col_index tells us which column is currently active
     if (row_index == 3) // Bottom row: *, 0, #
     {
@@ -294,7 +270,7 @@ static BYTE convert_to_key(void)
             return 0;
         return HASH_KEY;
     }
-    else // Rows 0-2: standard numeric layout
+    else // Rows 0-2: standard numeric layout (1-9)
     {
         return (row_index * 3) + col_index + 1;
     }
@@ -341,4 +317,63 @@ static void reset_internal_state(void)
     led_number = 0;
     led_intensity = 0;
     waiting_for_second_key = FALSE;
+}
+
+// Helper functions - much easier to understand than hex masks (Java-style)
+static void set_column_active(BYTE col_index)
+{
+    // ACTIVE HIGH: Set the specific column pin to HIGH (1) to activate it
+    switch (col_index)
+    {
+    case COL0_INDEX:
+        LATAbits.LATA2 = 1; // A2 = COL0 active
+        break;
+    case COL1_INDEX:
+        LATAbits.LATA0 = 1; // A0 = COL1 active
+        break;
+    case COL2_INDEX:
+        LATAbits.LATA4 = 1; // A4 = COL2 active
+        break;
+    }
+}
+
+static void set_all_columns_inactive(void)
+{
+    // ACTIVE HIGH: Set all column pins to LOW (0) to deactivate them
+    LATAbits.LATA2 = 0; // COL0 inactive
+    LATAbits.LATA0 = 0; // COL1 inactive
+    LATAbits.LATA4 = 0; // COL2 inactive
+}
+
+static BOOL is_row_pressed(BYTE row_bit)
+{
+    // ACTIVE HIGH: Check if specific row pin is HIGH (1) = pressed
+    switch (row_bit)
+    {
+    case ROW0_PIN_BIT:
+        return PORTAbits.RA1; // A1 = ROW0
+    case ROW1_PIN_BIT:
+        return PORTAbits.RA6; // A6 = ROW1
+    case ROW2_PIN_BIT:
+        return PORTAbits.RA5; // A5 = ROW2
+    case ROW3_PIN_BIT:
+        return PORTAbits.RA3; // A3 = ROW3
+    default:
+        return FALSE;
+    }
+}
+
+static BYTE get_pressed_row(void)
+{
+    // Check each row individually (much clearer than bit operations)
+    if (is_row_pressed(ROW0_PIN_BIT))
+        return ROW0_INDEX;
+    if (is_row_pressed(ROW1_PIN_BIT))
+        return ROW1_INDEX;
+    if (is_row_pressed(ROW2_PIN_BIT))
+        return ROW2_INDEX;
+    if (is_row_pressed(ROW3_PIN_BIT))
+        return ROW3_INDEX;
+
+    return NO_KEY_PRESSED; // No row pressed
 }
