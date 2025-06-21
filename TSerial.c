@@ -116,12 +116,10 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
     return FALSE;
 }
 
-#ifdef DEBUG_MODE
 void SIO_TEST_SendString(BYTE *string)
 {
     send_string(string);
 }
-#endif
 
 BYTE SIO_ReadCommand(void)
 {

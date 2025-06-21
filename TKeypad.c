@@ -130,7 +130,6 @@ void KEY_Motor(void)
 
         if (is_key_pressed() && user_inside)
         {
-            SIO_TEST_SendString("KEY_DETECTED_IDLE\r\n");
             scanning_paused = TRUE; // Stop scanning while processing key
             TiResetTics(TI_KEYPAD);
             keypad_state = STATE_DEBOUNCE_PRESS;
@@ -138,7 +137,6 @@ void KEY_Motor(void)
         else if (scanning_paused && !is_key_pressed())
         {
             // Resume scanning when no key is pressed
-            SIO_TEST_SendString("RESUMING_SCAN\r\n");
             scanning_paused = FALSE;
         }
         break;
@@ -146,12 +144,15 @@ void KEY_Motor(void)
     case STATE_DEBOUNCE_PRESS:
         if (TiGetTics(TI_KEYPAD) >= WAIT_16MS)
         {
+#ifdef DEBUG_MODE
             SIO_TEST_SendString("DEBOUNCE_PRESS_TIMEOUT\r\n");
+#endif
 
             // Check if a key is still pressed after debounce
             if (is_key_pressed())
             {
                 current_key = convert_to_key();
+#ifdef DEBUG_MODE
                 SIO_TEST_SendString("KEY_STILL_PRESSED: ");
 
                 // Send key value for debugging
@@ -160,11 +161,14 @@ void KEY_Motor(void)
                 key_str[1] = '\r';
                 key_str[2] = '\n';
                 SIO_TEST_SendString(key_str);
+#endif
 
                 // Filter out hardware errors early
                 if (current_key != NO_KEY_PRESSED)
                 {
+#ifdef DEBUG_MODE
                     SIO_TEST_SendString("KEY_VALID\r\n");
+#endif
                     TiResetTics(TI_KEYPAD);
 
                     // Check for '#' key first, regardless of state
