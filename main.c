@@ -36,7 +36,6 @@ void RSI_High(void) // For IntelliSense only
     if (INTCONbits.TMR0IF == 1)
     {
         Timer0_ISR();
-        LED_Motor(); // Update PWM light control
     }
 }
 
@@ -70,6 +69,7 @@ void main(void)
     while (TRUE)
     {
         // Run all hardware module motors
+        LED_Motor();  // Update PWM light control
         KEY_Motor();  // Process keypad input
         HORA_Motor(); // Update time management
         RFID_Motor(); // Update RFID motor

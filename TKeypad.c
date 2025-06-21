@@ -58,7 +58,7 @@ static void set_column_active(BYTE col_index);
 static void set_all_columns_inactive(void);
 static BOOL is_row_pressed(BYTE row_bit);
 static BYTE get_pressed_row(void);
-static void print_detected_key(); // For testing only
+static void print_detected_key(void); // For testing only
 
 void KEY_Init(void)
 {
@@ -147,11 +147,6 @@ void KEY_SetUserInside(BOOL inside)
     if (!inside)
         reset_internal_state();
     user_inside = inside;
-}
-
-void KEY_ResetCommand(void)
-{
-    command_ready = NO_COMMAND;
 }
 
 static void shift_keypad_rows(void)
@@ -260,7 +255,7 @@ static BYTE get_pressed_row(void)
 }
 
 // Method for testing only
-static void print_detected_key()
+static void print_detected_key(void)
 {
     BYTE detected_char;
     if (current_key < 10)
