@@ -6,8 +6,6 @@
 #define WAIT_3S ONE_SECOND * 3
 
 // Special key defines
-#define HASH_KEY 11
-#define STAR_KEY 10
 #define NO_KEY_PRESSED 12
 
 // Pin assignments (PORTA)
@@ -19,7 +17,6 @@
 #define ROW2_PIN_BIT 5 // A5
 #define ROW3_PIN_BIT 3 // A3
 
-#define TRISA_KEYPAD_CONFIG 0xEA
 #define KEYPAD_ROWS 4
 #define KEYPAD_COLS 3
 #define COL0_INDEX 0
@@ -37,7 +34,7 @@
 #define IDLE 0
 #define ON_KEY_PRESS 1
 #define READ_KEY_VALUE 2
-#define VALIDATE 3
+#define CHECK_KEY_VALUE 3
 #define ON_KEY_RELEASE 4
 #define EXEC_KEY 5
 #define RESET_HOLD 6
@@ -50,9 +47,8 @@ static BYTE led_number = 0;
 static BYTE led_intensity = 0;
 static BOOL waiting_for_second_key = FALSE;
 static BOOL user_inside = FALSE;
-static BOOL scanning_paused = FALSE;
 
-static void scan_keypad(void);
+static void shift_keypad_rows(void);
 static BYTE is_key_pressed(void);
 static BYTE convert_to_key(void);
 static void process_detected_key(BYTE key);
@@ -66,7 +62,7 @@ static BYTE get_pressed_row(void);
 
 void KEY_Init(void)
 {
-    TRISA = TRISA_KEYPAD_CONFIG;
+    TRISA = 0xEA;
     set_all_columns_inactive();
     reset_internal_state();
 }
@@ -76,72 +72,63 @@ void KEY_Motor(void)
     switch (keypad_state)
     {
     case IDLE:
-        if (!scanning_paused)
-            scan_keypad();
+        shift_keypad_rows();
         if (is_key_pressed() && user_inside)
         {
-            scanning_paused = TRUE;
             TiResetTics(TI_KEYPAD);
             keypad_state = ON_KEY_PRESS;
-        }
-        else if (scanning_paused && !is_key_pressed())
-        {
-            scanning_paused = FALSE;
         }
         break;
 
     case ON_KEY_PRESS:
         if (TiGetTics(TI_KEYPAD) >= WAIT_16MS)
+        {
             keypad_state = READ_KEY_VALUE;
+        }
         break;
 
     case READ_KEY_VALUE:
-        keypad_state = is_key_pressed() ? VALIDATE : IDLE;
-        if (keypad_state == VALIDATE)
+        keypad_state = IDLE; // if key not pressed, go to IDLE
+        if (is_key_pressed())
+        {
             current_key = convert_to_key();
+            keypad_state = CHECK_KEY_VALUE;
+        }
         break;
 
-    case VALIDATE:
-        if (current_key == NO_KEY_PRESSED)
-        {
-            keypad_state = IDLE;
-        }
-        else if (is_hash_key(current_key))
+    case CHECK_KEY_VALUE:
+        TiResetTics(TI_KEYPAD);
+        keypad_state = ON_KEY_RELEASE; // if key is not #, wait for release
+        if (is_hash_key(current_key))
         {
             waiting_for_second_key = FALSE;
             keypad_state = RESET_HOLD;
-        }
-        else
-        {
-            TiResetTics(TI_KEYPAD);
-            keypad_state = ON_KEY_RELEASE;
         }
         break;
 
     case ON_KEY_RELEASE:
         if (TiGetTics(TI_KEYPAD) >= WAIT_16MS)
+        {
             keypad_state = is_key_pressed() ? IDLE : EXEC_KEY;
+        }
         break;
 
     case EXEC_KEY:
         process_detected_key(current_key);
         current_key = NO_KEY_PRESSED;
-        scanning_paused = FALSE;
         keypad_state = IDLE;
         break;
 
     case RESET_HOLD:
-        if (!is_key_pressed())
+        if (!is_key_pressed()) // if key stops being pressed, reset state
         {
             waiting_for_second_key = FALSE;
-            scanning_paused = FALSE;
             keypad_state = IDLE;
         }
-        else if (TiGetTics(TI_KEYPAD) >= WAIT_3S)
+        else if (TiGetTics(TI_KEYPAD) >= WAIT_3S) // if key is pressed for 3 seconds, send reset command
         {
             command_ready = KEYPAD_RESET;
             waiting_for_second_key = FALSE;
-            scanning_paused = FALSE;
             keypad_state = IDLE;
         }
         break;
@@ -173,8 +160,10 @@ void KEY_ResetCommand(void)
     command_ready = NO_COMMAND;
 }
 
-static void scan_keypad(void)
+static void shift_keypad_rows(void)
 {
+    if (is_key_pressed())
+        return; // If key is pressed, don't shift rows
     col_index = (col_index + 1) % KEYPAD_COLS;
     set_all_columns_inactive();
     set_column_active(col_index);
@@ -188,16 +177,6 @@ static BYTE is_key_pressed(void)
 static BYTE convert_to_key(void)
 {
     BYTE row_index = get_pressed_row();
-    if (row_index == NO_KEY_PRESSED)
-        return NO_KEY_PRESSED;
-    if (row_index == 3)
-    {
-        if (col_index == 0)
-            return STAR_KEY;
-        if (col_index == 1)
-            return 0;
-        return HASH_KEY;
-    }
     return (row_index * 3) + col_index + 1;
 }
 
@@ -224,7 +203,7 @@ static BYTE is_valid_led_number(BYTE key)
 
 static BYTE is_hash_key(BYTE key)
 {
-    return (key == HASH_KEY);
+    return (key == 11); // Column = 3, Row = 4
 }
 
 static void reset_internal_state(void)
@@ -236,7 +215,6 @@ static void reset_internal_state(void)
     led_number = 0;
     led_intensity = 0;
     waiting_for_second_key = FALSE;
-    scanning_paused = FALSE;
 }
 
 static void set_column_active(BYTE col_index)

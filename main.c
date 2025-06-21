@@ -66,7 +66,7 @@ void main(void)
 
     init_users();
 
-       // Main cooperative loop
+    // Main cooperative loop
     while (TRUE)
     {
         // Run all hardware module motors
