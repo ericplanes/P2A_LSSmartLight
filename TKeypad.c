@@ -199,6 +199,7 @@ static void reset_internal_state(void)
     led_number = 0;
     led_intensity = 0;
     waiting_for_second_key = FALSE;
+    user_inside = FALSE;
 }
 
 static void set_column_active(BYTE col_index)
