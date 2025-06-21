@@ -18,7 +18,6 @@
 
 /* =======================================
  *         CONTROLLER STATES
- *         Naming: WHEN_ACTION
  * ======================================= */
 
 #define BOOT_INIT_SYSTEM 0          // On system boot - initialize display and LEDs
