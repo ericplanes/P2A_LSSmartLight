@@ -50,6 +50,7 @@ static BYTE rfid_uid[UID_SIZE];
 static BYTE cmd_buffer;
 static BYTE led_num, led_intensity;
 static BYTE user_pos;
+static BYTE users_sent;
 
 /* =======================================
  *       PRIVATE FUNCTION HEADERS
@@ -67,6 +68,7 @@ void CONTROLLER_Init(void)
 {
     state = BOOT_INIT_SYSTEM;
     user_inside = FALSE;
+    users_sent = 0;
     current_user_position = USER_NOT_FOUND;
 
     for (BYTE i = 0; i < UID_SIZE; i++)
@@ -231,15 +233,17 @@ void CONTROLLER_Motor(void)
         break;
 
     case SERIAL_SEND_CONFIGS:
-        for (BYTE user = 0; user < NUM_USERS;)
+        if (EEPROM_ReadConfigForUser(users_sent, current_config))
         {
-            if (EEPROM_ReadConfigForUser(user, current_config))
-            {
-                SIO_SendStoredConfig(USER_GetUserByPosition(user), current_config);
-                user++;
-            }
+            SIO_SendStoredConfig(USER_GetUserByPosition(users_sent), current_config);
+            users_sent++;
         }
-        state = INPUT_WAIT_DETECT;
+
+        if (users_sent == NUM_USERS) // Once all users have been sent, reset the counter
+        {
+            users_sent = 0;
+            state = INPUT_WAIT_DETECT;
+        }
         break;
 
     case SERIAL_WAIT_TIME_INPUT:
