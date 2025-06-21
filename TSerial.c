@@ -267,12 +267,14 @@ static void format_config(const BYTE *config, BYTE *config_buffer)
         config_buffer[pos++] = i + '0';
         config_buffer[pos++] = ':';
         config_buffer[pos++] = ' ';
-        config_buffer[pos++] = (config[i] == 10) ? 'A' : (config[i] + '0');
+        config_buffer[pos++] = hex_char(config[i]);
     }
     config_buffer[pos] = '\0';
 }
 
 static BYTE hex_char(BYTE val)
 {
-    return (val < 10) ? ('0' + val) : ('A' + val - 10);
+    if (val < 10)
+        return '0' + val;
+    return 'A' + val - 10;
 }

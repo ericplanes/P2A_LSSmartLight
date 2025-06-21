@@ -126,7 +126,7 @@ void CNTR_Motor(void)
         if (user_pos == USER_NOT_FOUND)
         {
             SIO_SendUnknownCard(rfid_uid);
-            state = INPUT_WAIT_DETECT; // Done
+            state = INPUT_WAIT_DETECT;
         }
         else if (user_pos == current_user_position)
         {
@@ -229,10 +229,6 @@ void CNTR_Motor(void)
             state = INPUT_WAIT_DETECT;
         }
         break;
-
-    default:
-        state = INPUT_WAIT_DETECT;
-        break;
     }
 }
 
@@ -278,6 +274,9 @@ static BYTE get_last_uid_char(const BYTE *uid)
     BYTE last_byte = uid[4];             // Last byte of 5-byte UID
     BYTE last_nibble = last_byte & 0x0F; // Extract lower nibble (last hex digit)
 
-    // Convert to ASCII character
-    return (last_nibble < 10) ? ('0' + last_nibble) : ('A' + last_nibble - 10);
+    if (last_nibble < 10)
+    {
+        return '0' + last_nibble;
+    }
+    return 'A' + last_nibble - 10;
 }
