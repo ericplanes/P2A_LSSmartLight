@@ -18,12 +18,22 @@
 static const BYTE msg_crlf[] = "\r\n";
 static const BYTE msg_main_menu[] = "---------------\r\nMain Menu\r\n---------------\r\nChoose:\r\n1.Who in room?\r\n2.Show configs\r\n3.Modify time\r\nOption: ";
 
+// Buffer for UID formatting
+static BYTE uid_buffer[15]; // 5 bytes * 2 chars + 4 dashes + null terminator
+
+// Buffer for config formatting
+static BYTE config_buffer[40]; // "L0: 0 - L1: 3 - L2: 9 - L3: A - L4: 0 - L5: 9" + null terminator
+
 /* =======================================
  *        PRIVATE FUNCTION HEADERS
  * ======================================= */
 
 static BOOL send_char(BYTE character);
 static void send_string(BYTE *string);
+static void clear_before_new_message(void);
+static void format_uid(const BYTE *uid, BYTE *uid_buffer);
+static void format_config(const BYTE *config, BYTE *config_buffer);
+static BYTE hex_char(BYTE val);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -61,6 +71,7 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
         {
             hour_chars[0] = received_char;
             state = TIME_STATE_HOUR_SECOND;
+            send_char(received_char);
         }
         break;
 
@@ -72,6 +83,7 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
             while (!send_char(':'))
                 ;
             state = TIME_STATE_MIN_FIRST;
+            send_char(received_char);
         }
         break;
 
@@ -80,6 +92,7 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
         {
             min_chars[0] = received_char;
             state = TIME_STATE_MIN_SECOND;
+            send_char(received_char);
         }
         break;
 
@@ -92,6 +105,9 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
 
             // Reset state for next time
             state = TIME_STATE_HOUR_FIRST;
+            send_char(received_char);
+            clear_before_new_message();
+            send_string((BYTE *)"Time updated successfully.\r\n");
             return TRUE;
         }
         break;
@@ -100,12 +116,10 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
     return FALSE;
 }
 
-#ifdef DEBUG_MODE
 void SIO_TEST_SendString(BYTE *string)
 {
     send_string(string);
 }
-#endif
 
 BYTE SIO_ReadCommand(void)
 {
@@ -130,78 +144,67 @@ BYTE SIO_ReadCommand(void)
     }
 }
 
-void SIO_SendDetectedCard(BYTE *UID, BYTE *config)
+void SIO_SendDetectedCard(const BYTE *uid_bytes, const BYTE *config)
 {
-    BYTE i;
+    format_uid(uid_bytes, uid_buffer);
+    format_config(config, config_buffer);
 
-    send_string((BYTE *)msg_crlf);
+    clear_before_new_message();
     send_string((BYTE *)"Card detected!\r\nUID: ");
-    send_string(UID);
+    send_string(uid_buffer);
     send_string((BYTE *)msg_crlf);
-    send_string((BYTE *)"L0: ");
-    send_char(config[0] + '0');
-
-    for (i = 1; i < 6; i++)
-    {
-        send_string((BYTE *)" - L");
-        send_char(i + '0');
-        send_string((BYTE *)": ");
-        send_char((config[i] == 10) ? 'A' : (config[i] + '0'));
-    }
+    send_string(config_buffer);
     send_string((BYTE *)msg_crlf);
 }
 
 void SIO_SendMainMenu(void)
 {
-    send_string((BYTE *)msg_crlf);
+    clear_before_new_message();
     send_string((BYTE *)msg_main_menu);
 }
 
-void SIO_SendUser(BYTE *User)
+void SIO_SendUser(const BYTE *uid_bytes)
 {
+    format_uid(uid_bytes, uid_buffer);
+
     send_string((BYTE *)msg_crlf);
     send_string((BYTE *)"Current user: UID ");
-    send_string(User);
+    send_string(uid_buffer);
     send_string((BYTE *)msg_crlf);
 }
 
 void SIO_SendNoUser(void)
 {
-    send_string((BYTE *)msg_crlf);
+    clear_before_new_message();
     send_string((BYTE *)"No one in the room.\r\n");
 }
 
-void SIO_SendStoredConfig(BYTE *UID, BYTE *config)
+void SIO_SendStoredConfig(const BYTE *uid_bytes, const BYTE *config)
 {
-    BYTE i;
+    format_uid(uid_bytes, uid_buffer);
+    format_config(config, config_buffer);
 
-    send_string((BYTE *)msg_crlf);
+    clear_before_new_message();
     send_string((BYTE *)"UID: ");
-    send_string(UID);
-    send_string((BYTE *)" -> L0: ");
-    send_char(config[0] + '0');
-
-    for (i = 1; i < 6; i++)
-    {
-        send_string((BYTE *)" - L");
-        send_char(i + '0');
-        send_string((BYTE *)": ");
-        send_char((config[i] == 10) ? 'A' : (config[i] + '0'));
-    }
+    send_string(uid_buffer);
+    send_string((BYTE *)" -> ");
+    send_string(config_buffer);
     send_string((BYTE *)msg_crlf);
 }
 
 void SIO_SendTimePrompt(void)
 {
-    send_string((BYTE *)msg_crlf);
+    clear_before_new_message();
     send_string((BYTE *)"Enter new time (HH:MM): ");
 }
 
-void SIO_SendUnknownCard(BYTE *UID)
+void SIO_SendUnknownCard(const BYTE *uid_bytes)
 {
-    send_string((BYTE *)msg_crlf);
+    format_uid(uid_bytes, uid_buffer);
+
+    clear_before_new_message();
     send_string((BYTE *)"Card detected!\r\nUnknown UID: ");
-    send_string(UID);
+    send_string(uid_buffer);
     send_string((BYTE *)"\r\nCard not recognized. Ignored.\r\n");
 }
 
@@ -227,4 +230,51 @@ static void send_string(BYTE *string)
             ;
         i++;
     }
+}
+
+static void clear_before_new_message(void)
+{
+    send_string((BYTE *)msg_crlf);
+    send_string((BYTE *)msg_crlf);
+}
+
+static void format_uid(const BYTE *uid, BYTE *uid_buffer)
+{
+    BYTE pos = 0;
+    for (BYTE i = 0; i < 5; i++) // UID_SIZE = 5
+    {
+        uid_buffer[pos++] = hex_char((uid[i] >> 4) & 0x0F);
+        uid_buffer[pos++] = hex_char(uid[i] & 0x0F);
+        if (i < 4) // UID_SIZE - 1
+            uid_buffer[pos++] = '-';
+    }
+    uid_buffer[pos] = '\0';
+}
+
+static void format_config(const BYTE *config, BYTE *config_buffer)
+{
+    BYTE pos = 0;
+    for (BYTE i = 0; i < 6; i++) // 6 LEDs
+    {
+        if (i > 0)
+        {
+            config_buffer[pos++] = ' ';
+            config_buffer[pos++] = '-';
+            config_buffer[pos++] = ' ';
+        }
+
+        config_buffer[pos++] = 'L';
+        config_buffer[pos++] = i + '0';
+        config_buffer[pos++] = ':';
+        config_buffer[pos++] = ' ';
+        config_buffer[pos++] = hex_char(config[i]);
+    }
+    config_buffer[pos] = '\0';
+}
+
+static BYTE hex_char(BYTE val)
+{
+    if (val < 10)
+        return '0' + val;
+    return 'A' + val - 10;
 }

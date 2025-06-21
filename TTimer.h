@@ -14,17 +14,12 @@
 #define TI_KEYPAD 1
 #define TI_LIGHTS 2
 #define TI_LCD 3
-#define TI_SERIAL 4
-#define TI_HORA 5
+#define TI_HORA 4
 
 void Timer0_ISR(void);
 
 void TiInit(void);
 // Post: Constructor. It is a global precondition to have called this function before calling any other function of the TAD.
-
-BYTE TiNewTimer(BYTE *TimerHandle);
-// Post: Returns TRUE if a new timer was successfully created, and FALSE otherwise.
-// Sets *TimerHandle to the assigned timer identifier, which is needed to use TI_GetTics and TI_ResetTics.
 
 void TiResetTics(BYTE TimerHandle);
 // Pre: Handle has been returned by TiNewTimer.

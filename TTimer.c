@@ -43,19 +43,7 @@ void TiInit()
     OSCCONbits.SCS = 0b00;   // Use clock defined by CONFIG
 }
 
-BYTE TiNewTimer(BYTE *TimerHandle)
-{
-    BYTE counter = 0;
-    while (Timers[counter].Busy == TRUE)
-    {
-        if (++counter == TI_NUMTIMERS)
-            return (FALSE);
-    }
-    Timers[counter].Busy = TRUE;
-    *TimerHandle = counter;
-    return (TRUE);
-}
-
+#pragma reentrant TiResetTics
 void TiResetTics(BYTE TimerHandle)
 {
     di();
@@ -63,6 +51,7 @@ void TiResetTics(BYTE TimerHandle)
     ei();
 }
 
+#pragma reentrant TiGetTics
 WORD TiGetTics(BYTE TimerHandle)
 {
     di();

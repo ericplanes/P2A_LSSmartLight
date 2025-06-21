@@ -81,8 +81,8 @@
 #define TRELOADREGL 0x2D
 
 // UID related constants
-#define RFID_UID_SIZE 4     // Size of UID in bytes
-#define RFID_UID_STR_SIZE 9 // Size of UID string (4 bytes * 2 chars + null terminator)
+#define RFID_UID_SIZE 5      // Size of UID in bytes
+#define RFID_UID_STR_SIZE 15 // Size of UID string (5 bytes * 2 chars + 4 dashes + null terminator)
 
 //-------------- Public interface: --------------
 void RFID_Init(void);

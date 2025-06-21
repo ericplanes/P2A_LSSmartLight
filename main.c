@@ -39,21 +39,31 @@ void RSI_High(void) // For IntelliSense only
     }
 }
 
+void init_users(void)
+{
+    EEPROM_StoreConfigForUser(0, (BYTE[]){9, 9, 9, 0, 0, 0});
+    EEPROM_StoreConfigForUser(1, (BYTE[]){9, 9, 0, 0, 0, 9});
+    EEPROM_StoreConfigForUser(2, (BYTE[]){9, 0, 0, 0, 9, 9});
+    EEPROM_StoreConfigForUser(3, (BYTE[]){0, 0, 0, 9, 9, 9});
+}
+
 /* =======================================
  *               MAIN
  * ======================================= */
 void main(void)
 {
     // Initialize all modules in proper order
-    TiInit();          // Timer system (must be first)
-    SIO_Init();        // Serial communication
-    LED_Init();        // PWM light control
-    EEPROM_Init();     // EEPROM storage
-    LCD_Init();        // LCD display
-    KEY_Init();        // Keypad input
-    HORA_Init();       // Time management
-    RFID_Init();       // RFID card reader
-    CONTROLLER_Init(); // Main system controller
+    TiInit();      // Timer system (must be first)
+    SIO_Init();    // Serial communication
+    LED_Init();    // PWM light control
+    EEPROM_Init(); // EEPROM storage
+    LCD_Init();    // LCD display
+    KEY_Init();    // Keypad input
+    HORA_Init();   // Time management
+    RFID_Init();   // RFID card reader
+    CNTR_Init();   // Main system controller, has to be the last one
+
+    init_users();
 
     // Main cooperative loop
     while (TRUE)
@@ -65,6 +75,6 @@ void main(void)
         RFID_Motor(); // Update RFID motor
 
         // Run main system controller
-        CONTROLLER_Motor(); // Coordinate all system logic
+        CNTR_Motor(); // Coordinate all system logic
     }
 }
