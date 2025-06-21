@@ -38,7 +38,6 @@
  * ======================================= */
 
 static BYTE state = INPUT_WAIT_DETECT;
-static BYTE current_user_uid[UID_SIZE] = {0};
 static BYTE current_user_position = USER_NOT_FOUND;
 static BYTE current_config[CONFIG_SIZE] = {0};
 static BYTE time_hour = 0, time_minute = 0;
@@ -62,13 +61,13 @@ static void clean_uid(void);
  *         PUBLIC FUNCTION BODIES
  * ======================================= */
 
-void CONTROLLER_Init(void)
+void CNTR_Init(void)
 {
     SIO_SendMainMenu();
     LCD_WriteNoUserInfo();
 }
 
-void CONTROLLER_Motor(void)
+void CNTR_Motor(void)
 {
     switch (state)
     {
@@ -136,16 +135,13 @@ void CONTROLLER_Motor(void)
         }
         else
         {
-            last_uid_char = get_last_uid_char(current_user_uid);
+            last_uid_char = get_last_uid_char(rfid_uid);
             state = RFID_USER_ENTER;
         }
         break;
 
     case RFID_USER_ENTER:
         current_user_position = user_pos;
-        for (BYTE i = 0; i < UID_SIZE; i++)
-            current_user_uid[i] = rfid_uid[i];
-
         KEY_SetUserInside(TRUE);
         state = RFID_LOAD_USER_CONFIG;
         break;
@@ -154,8 +150,8 @@ void CONTROLLER_Motor(void)
         if (EEPROM_ReadConfigForUser(current_user_position, current_config))
         {
             LED_UpdateConfig(current_config);
-            SIO_SendDetectedCard(current_user_uid, current_config);
-            LCD_WriteUserInfo(get_last_uid_char(current_user_uid), current_config);
+            SIO_SendDetectedCard(rfid_uid, current_config);
+            LCD_WriteUserInfo(get_last_uid_char(rfid_uid), current_config);
             state = INPUT_WAIT_DETECT;
         }
         break;
@@ -164,7 +160,7 @@ void CONTROLLER_Motor(void)
         current_user_position = USER_NOT_FOUND;
         KEY_SetUserInside(FALSE);
 
-        SIO_SendDetectedCard(current_user_uid, current_config);
+        SIO_SendDetectedCard(rfid_uid, current_config);
         LCD_WriteNoUserInfo();
 
         clean_config();
@@ -202,7 +198,7 @@ void CONTROLLER_Motor(void)
     case SERIAL_SEND_WHO_RESPONSE:
         if (current_user_position != USER_NOT_FOUND)
         {
-            SIO_SendUser(current_user_uid);
+            SIO_SendUser(rfid_uid);
         }
         else
         {
@@ -259,11 +255,11 @@ static void reset_system(void)
 
 static void clean_uid(void)
 {
-    current_user_uid[0] = 0x00;
-    current_user_uid[1] = 0x00;
-    current_user_uid[2] = 0x00;
-    current_user_uid[3] = 0x00;
-    current_user_uid[4] = 0x00;
+    rfid_uid[0] = 0x00;
+    rfid_uid[1] = 0x00;
+    rfid_uid[2] = 0x00;
+    rfid_uid[3] = 0x00;
+    rfid_uid[4] = 0x00;
 }
 
 static void clean_config(void)

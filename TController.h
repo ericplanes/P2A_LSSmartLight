@@ -22,13 +22,13 @@
  *         PUBLIC FUNCTION HEADERS
  * ======================================= */
 
-void CONTROLLER_Init(void);
+void CNTR_Init(void);
 // Post: Initializes the controller and performs startup protocol
 // - Sends main menu via serial
 // - Displays initial empty state on LCD
 // - Initializes internal state variables
 
-void CONTROLLER_Motor(void);
+void CNTR_Motor(void);
 // Post: Executes one cycle of the main system control loop
 // - Manages user presence state
 // - Processes keypad commands when user is inside
