@@ -51,7 +51,7 @@ void LED_Init(void)
     for (BYTE i = 0; i < NUM_LEDS; i++)
     {
         set_led(i, LED_OFF);
-        led_config[i] = 0; // Also initialize config array
+        led_config[i] = 0;
     }
 }
 
@@ -114,26 +114,27 @@ static void configure_all_leds_as_outputs(void)
 
 static void set_led(BYTE led_index, BYTE state)
 {
-    // Control each LED individually (Java-style switch, much clearer!)
+    BYTE bit_value = (state == LED_ON) ? 1 : 0;
+
     switch (led_index)
     {
     case LED0_INDEX:
-        LATDbits.LATD1 = state; // LED0 -> RD1
+        LATDbits.LATD1 = bit_value; // LED0 -> RD1
         break;
     case LED1_INDEX:
-        LATDbits.LATD2 = state; // LED1 -> RD2
+        LATDbits.LATD2 = bit_value; // LED1 -> RD2
         break;
     case LED2_INDEX:
-        LATDbits.LATD3 = state; // LED2 -> RD3
+        LATDbits.LATD3 = bit_value; // LED2 -> RD3
         break;
     case LED3_INDEX:
-        LATCbits.LATC4 = state; // LED3 -> RC4
+        LATCbits.LATC4 = bit_value; // LED3 -> RC4
         break;
     case LED4_INDEX:
-        LATCbits.LATC5 = state; // LED4 -> RC5
+        LATCbits.LATC5 = bit_value; // LED4 -> RC5
         break;
     case LED5_INDEX:
-        LATDbits.LATD4 = state; // LED5 -> RD4
+        LATDbits.LATD4 = bit_value; // LED5 -> RD4
         break;
     }
 }
