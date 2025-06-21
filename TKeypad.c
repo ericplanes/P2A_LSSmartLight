@@ -6,6 +6,7 @@
 #define WAIT_3S ONE_SECOND * 3
 
 // Special key defines
+#define HASH_KEY 11
 #define NO_KEY_PRESSED 12
 
 // Pin assignments (PORTA)
@@ -35,9 +36,8 @@
 #define ON_KEY_PRESS 1
 #define READ_KEY_VALUE 2
 #define CHECK_KEY_VALUE 3
-#define ON_KEY_RELEASE 4
-#define EXEC_KEY 5
-#define RESET_HOLD 6
+#define STORE_KEY 4
+#define RESET_HOLD 5
 
 static BYTE keypad_state = IDLE;
 static BYTE current_key = NO_KEY_PRESSED;
@@ -51,14 +51,14 @@ static BOOL user_inside = FALSE;
 static void shift_keypad_rows(void);
 static BYTE is_key_pressed(void);
 static BYTE convert_to_key(void);
-static void process_detected_key(BYTE key);
+static void store_detected_key(BYTE key);
 static BYTE is_valid_led_number(BYTE key);
-static BYTE is_hash_key(BYTE key);
 static void reset_internal_state(void);
 static void set_column_active(BYTE col_index);
 static void set_all_columns_inactive(void);
 static BOOL is_row_pressed(BYTE row_bit);
 static BYTE get_pressed_row(void);
+static void print_detected_key(); // For testing only
 
 void KEY_Init(void)
 {
@@ -97,24 +97,18 @@ void KEY_Motor(void)
         break;
 
     case CHECK_KEY_VALUE:
+        print_detected_key();
         TiResetTics(TI_KEYPAD);
-        keypad_state = ON_KEY_RELEASE; // if key is not #, wait for release
-        if (is_hash_key(current_key))
+        keypad_state = STORE_KEY; // if key is not #, wait for release
+        if (current_key == HASH_KEY)
         {
             waiting_for_second_key = FALSE;
             keypad_state = RESET_HOLD;
         }
         break;
 
-    case ON_KEY_RELEASE:
-        if (TiGetTics(TI_KEYPAD) >= WAIT_16MS)
-        {
-            keypad_state = is_key_pressed() ? IDLE : EXEC_KEY;
-        }
-        break;
-
-    case EXEC_KEY:
-        process_detected_key(current_key);
+    case STORE_KEY:
+        store_detected_key(current_key);
         current_key = NO_KEY_PRESSED;
         keypad_state = IDLE;
         break;
@@ -180,7 +174,7 @@ static BYTE convert_to_key(void)
     return (row_index * 3) + col_index + 1;
 }
 
-static void process_detected_key(BYTE key)
+static void store_detected_key(BYTE key)
 {
     if (waiting_for_second_key)
     {
@@ -199,11 +193,6 @@ static void process_detected_key(BYTE key)
 static BYTE is_valid_led_number(BYTE key)
 {
     return (key <= MAX_LED_NUMBER);
-}
-
-static BYTE is_hash_key(BYTE key)
-{
-    return (key == 11); // Column = 3, Row = 4
 }
 
 static void reset_internal_state(void)
@@ -268,4 +257,22 @@ static BYTE get_pressed_row(void)
     if (is_row_pressed(ROW3_PIN_BIT))
         return ROW3_INDEX;
     return NO_KEY_PRESSED;
+}
+
+// Method for testing only
+static void print_detected_key()
+{
+    BYTE detected_char;
+    if (current_key < 10)
+    {
+        detected_char = current_key + '0';
+    }
+    else
+    {
+        detected_char = current_key == 10 ? '*' : '#';
+    }
+
+    static BYTE buffer[20] = "\r\nDetected Key: X\r\n";
+    buffer[15] = detected_char; // Correct index for 'X'
+    SIO_TEST_SendString(buffer);
 }
