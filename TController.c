@@ -39,18 +39,17 @@
  * ======================================= */
 
 static BYTE state = BOOT_INIT_SYSTEM;
-static BOOL user_inside;
-static BYTE current_user_uid[UID_SIZE];
-static BYTE current_user_position;
-static BYTE current_config[CONFIG_SIZE];
+static BOOL user_inside = FALSE;
+static BYTE current_user_uid[UID_SIZE] = {0};
+static BYTE current_user_position = USER_NOT_FOUND;
+static BYTE current_config[CONFIG_SIZE] = {0};
 static BYTE time_hour = 0, time_minute = 0;
 
 // Processing variables
-static BYTE rfid_uid[UID_SIZE];
-static BYTE cmd_buffer;
-static BYTE led_num, led_intensity;
-static BYTE user_pos;
-static BYTE users_sent;
+static BYTE rfid_uid[UID_SIZE] = {0};
+static BYTE cmd_buffer = NO_COMMAND;
+static BYTE led_num = 0, led_intensity = 0;
+static BYTE user_pos = 0, users_sent = 0;
 
 /* =======================================
  *       PRIVATE FUNCTION HEADERS
@@ -59,6 +58,7 @@ static BYTE users_sent;
 static void reset_system(void);
 static void clean_config(void);
 static BYTE get_last_uid_char(const BYTE *uid);
+static void clean_uid(void);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -66,17 +66,6 @@ static BYTE get_last_uid_char(const BYTE *uid);
 
 void CONTROLLER_Init(void)
 {
-    state = BOOT_INIT_SYSTEM;
-    user_inside = FALSE;
-    users_sent = 0;
-    current_user_position = USER_NOT_FOUND;
-
-    for (BYTE i = 0; i < UID_SIZE; i++)
-        current_user_uid[i] = 0;
-    for (BYTE i = 0; i < CONFIG_SIZE; i++)
-        current_config[i] = 0;
-
-    KEY_SetUserInside(FALSE);
 }
 
 void CONTROLLER_Motor(void)
@@ -271,14 +260,21 @@ static void reset_system(void)
     user_inside = FALSE;
     current_user_position = USER_NOT_FOUND;
 
-    for (BYTE i = 0; i < UID_SIZE; i++)
-        current_user_uid[i] = 0;
-    for (BYTE i = 0; i < CONFIG_SIZE; i++)
-        current_config[i] = 0;
+    clean_uid();
+    clean_config();
 
     LED_UpdateConfig(current_config);
     LCD_WriteNoUserInfo();
     KEY_SetUserInside(FALSE);
+}
+
+static void clean_uid(void)
+{
+    current_user_uid[0] = 0x00;
+    current_user_uid[1] = 0x00;
+    current_user_uid[2] = 0x00;
+    current_user_uid[3] = 0x00;
+    current_user_uid[4] = 0x00;
 }
 
 static void clean_config(void)
