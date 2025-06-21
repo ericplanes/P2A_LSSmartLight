@@ -19,8 +19,8 @@
 #define NUM_LEDS 6  // Number of LEDs to control
 
 // LED status
-#define LED_OFF TRUE
-#define LED_ON FALSE
+#define LED_OFF 1
+#define LED_ON 0
 
 /* =======================================
  *        PRIVATE FUNCTION HEADERS
@@ -97,7 +97,15 @@ void LED_UpdateConfig(BYTE *config)
 static void update_led_pwm(BYTE led_index, BYTE brightness, WORD current_tics)
 {
     // Simple PWM logic: LED ON when current_tics < brightness
-    BYTE led_state = (current_tics < brightness) ? LED_ON : LED_OFF;
+    BYTE led_state;
+    if (current_tics < brightness)
+    {
+        led_state = LED_ON;
+    }
+    else
+    {
+        led_state = LED_OFF;
+    }
     set_led(led_index, led_state);
 }
 
@@ -114,27 +122,25 @@ static void configure_all_leds_as_outputs(void)
 
 static void set_led(BYTE led_index, BYTE state)
 {
-    BYTE bit_value = (state == LED_ON) ? 1 : 0;
-
     switch (led_index)
     {
     case LED0_INDEX:
-        LATDbits.LATD1 = bit_value; // LED0 -> RD1
+        LATDbits.LATD1 = state; // LED0 -> RD1
         break;
     case LED1_INDEX:
-        LATDbits.LATD2 = bit_value; // LED1 -> RD2
+        LATDbits.LATD2 = state; // LED1 -> RD2
         break;
     case LED2_INDEX:
-        LATDbits.LATD3 = bit_value; // LED2 -> RD3
+        LATDbits.LATD3 = state; // LED2 -> RD3
         break;
     case LED3_INDEX:
-        LATCbits.LATC4 = bit_value; // LED3 -> RC4
+        LATCbits.LATC4 = state; // LED3 -> RC4
         break;
     case LED4_INDEX:
-        LATCbits.LATC5 = bit_value; // LED4 -> RC5
+        LATCbits.LATC5 = state; // LED4 -> RC5
         break;
     case LED5_INDEX:
-        LATDbits.LATD4 = bit_value; // LED5 -> RD4
+        LATDbits.LATD4 = state; // LED5 -> RD4
         break;
     }
 }

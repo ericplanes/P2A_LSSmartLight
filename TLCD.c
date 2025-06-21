@@ -221,10 +221,41 @@ static void delay_ms(BYTE milliseconds)
 static void send_nibble(BYTE nibble)
 {
     // Set data pins
-    set_data_bit_7(nibble & 0x08 ? 1 : 0);
-    set_data_bit_6(nibble & 0x04 ? 1 : 0);
-    set_data_bit_5(nibble & 0x02 ? 1 : 0);
-    set_data_bit_4(nibble & 0x01 ? 1 : 0);
+    if (nibble & 0x08)
+    {
+        set_data_bit_7(1);
+    }
+    else
+    {
+        set_data_bit_7(0);
+    }
+
+    if (nibble & 0x04)
+    {
+        set_data_bit_6(1);
+    }
+    else
+    {
+        set_data_bit_6(0);
+    }
+
+    if (nibble & 0x02)
+    {
+        set_data_bit_5(1);
+    }
+    else
+    {
+        set_data_bit_5(0);
+    }
+
+    if (nibble & 0x01)
+    {
+        set_data_bit_4(1);
+    }
+    else
+    {
+        set_data_bit_4(0);
+    }
 
     // Pulse enable pin (double call ensures sufficient pulse width)
     set_enable_high();
@@ -242,10 +273,41 @@ static void send_nibble_init(BYTE nibble)
     set_read_write_low();      // Write mode
 
     // Set data pins for 8-bit startup command
-    set_data_bit_7(nibble & 0x08 ? 1 : 0);
-    set_data_bit_6(nibble & 0x04 ? 1 : 0);
-    set_data_bit_5(nibble & 0x02 ? 1 : 0);
-    set_data_bit_4(nibble & 0x01 ? 1 : 0);
+    if (nibble & 0x08)
+    {
+        set_data_bit_7(1);
+    }
+    else
+    {
+        set_data_bit_7(0);
+    }
+
+    if (nibble & 0x04)
+    {
+        set_data_bit_6(1);
+    }
+    else
+    {
+        set_data_bit_6(0);
+    }
+
+    if (nibble & 0x02)
+    {
+        set_data_bit_5(1);
+    }
+    else
+    {
+        set_data_bit_5(0);
+    }
+
+    if (nibble & 0x01)
+    {
+        set_data_bit_4(1);
+    }
+    else
+    {
+        set_data_bit_4(0);
+    }
 
     // Pulse enable pin
     set_enable_high();
@@ -262,10 +324,41 @@ static void send_instruction_init(BYTE instruction)
     set_read_write_low();      // Write mode
 
     // Send upper nibble
-    set_data_bit_7(instruction & 0x80 ? 1 : 0);
-    set_data_bit_6(instruction & 0x40 ? 1 : 0);
-    set_data_bit_5(instruction & 0x20 ? 1 : 0);
-    set_data_bit_4(instruction & 0x10 ? 1 : 0);
+    if (instruction & 0x80)
+    {
+        set_data_bit_7(1);
+    }
+    else
+    {
+        set_data_bit_7(0);
+    }
+
+    if (instruction & 0x40)
+    {
+        set_data_bit_6(1);
+    }
+    else
+    {
+        set_data_bit_6(0);
+    }
+
+    if (instruction & 0x20)
+    {
+        set_data_bit_5(1);
+    }
+    else
+    {
+        set_data_bit_5(0);
+    }
+
+    if (instruction & 0x10)
+    {
+        set_data_bit_4(1);
+    }
+    else
+    {
+        set_data_bit_4(0);
+    }
 
     set_enable_high();
     set_enable_high();
@@ -273,10 +366,41 @@ static void send_instruction_init(BYTE instruction)
     set_enable_low();
 
     // Send lower nibble
-    set_data_bit_7(instruction & 0x08 ? 1 : 0);
-    set_data_bit_6(instruction & 0x04 ? 1 : 0);
-    set_data_bit_5(instruction & 0x02 ? 1 : 0);
-    set_data_bit_4(instruction & 0x01 ? 1 : 0);
+    if (instruction & 0x08)
+    {
+        set_data_bit_7(1);
+    }
+    else
+    {
+        set_data_bit_7(0);
+    }
+
+    if (instruction & 0x04)
+    {
+        set_data_bit_6(1);
+    }
+    else
+    {
+        set_data_bit_6(0);
+    }
+
+    if (instruction & 0x02)
+    {
+        set_data_bit_5(1);
+    }
+    else
+    {
+        set_data_bit_5(0);
+    }
+
+    if (instruction & 0x01)
+    {
+        set_data_bit_4(1);
+    }
+    else
+    {
+        set_data_bit_4(0);
+    }
 
     set_enable_high();
     set_enable_high();
