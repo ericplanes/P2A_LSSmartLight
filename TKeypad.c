@@ -1,5 +1,6 @@
 #include "TKeypad.h"
 #include "TTimer.h"
+#include "TSerial.h"
 
 #define WAIT_16MS TWO_MS * 8
 #define WAIT_3S ONE_SECOND * 3
@@ -83,6 +84,7 @@ static BYTE led_number = 0;
 static BYTE led_intensity = 0;
 static BOOL waiting_for_second_key = FALSE;
 static BOOL user_inside = FALSE;
+static BOOL scanning_paused = FALSE; // Para l'escombrat quan hi ha tecla premuda
 
 // Optimized: Arrays replaced with inline calculations to save memory
 
@@ -120,41 +122,73 @@ void KEY_Motor(void)
     switch (keypad_state)
     {
     case STATE_IDLE:
-        scan_keypad();
+        // Only scan if no key is currently pressed (avoid interference)
+        if (!scanning_paused)
+        {
+            scan_keypad();
+        }
+
         if (is_key_pressed() && user_inside)
         {
+            SIO_TEST_SendString("KEY_DETECTED_IDLE\r\n");
+            scanning_paused = TRUE; // Stop scanning while processing key
             TiResetTics(TI_KEYPAD);
             keypad_state = STATE_DEBOUNCE_PRESS;
+        }
+        else if (scanning_paused && !is_key_pressed())
+        {
+            // Resume scanning when no key is pressed
+            SIO_TEST_SendString("RESUMING_SCAN\r\n");
+            scanning_paused = FALSE;
         }
         break;
 
     case STATE_DEBOUNCE_PRESS:
         if (TiGetTics(TI_KEYPAD) >= WAIT_16MS)
         {
-            // Go to idle state first
-            keypad_state = STATE_IDLE;
+            SIO_TEST_SendString("DEBOUNCE_PRESS_TIMEOUT\r\n");
 
-            // Check if a key is pressed
+            // Check if a key is still pressed after debounce
             if (is_key_pressed())
             {
                 current_key = convert_to_key();
+                SIO_TEST_SendString("KEY_STILL_PRESSED: ");
+
+                // Send key value for debugging
+                BYTE key_str[3];
+                key_str[0] = (current_key < 10) ? ('0' + current_key) : ('A' + current_key - 10);
+                key_str[1] = '\r';
+                key_str[2] = '\n';
+                SIO_TEST_SendString(key_str);
 
                 // Filter out hardware errors early
                 if (current_key != NO_KEY_PRESSED)
                 {
+                    SIO_TEST_SendString("KEY_VALID\r\n");
                     TiResetTics(TI_KEYPAD);
-
-                    // If no '#' key, go to debounce release state
-                    keypad_state = STATE_DEBOUNCE_RELEASE;
 
                     // Check for '#' key first, regardless of state
                     if (is_hash_key(current_key))
                     {
+                        SIO_TEST_SendString("HASH_KEY_DETECTED\r\n");
                         waiting_for_second_key = FALSE; // Cancel any waiting state
                         keypad_state = STATE_WAIT_RESET_CONFIRM;
                     }
+                    else
+                    {
+                        keypad_state = STATE_DEBOUNCE_RELEASE;
+                    }
                 }
-                // If hardware error (NO_KEY_PRESSED), stay in current state to retry
+                else
+                {
+                    SIO_TEST_SendString("KEY_INVALID\r\n");
+                    keypad_state = STATE_IDLE; // Back to idle if invalid
+                }
+            }
+            else
+            {
+                SIO_TEST_SendString("KEY_NO_LONGER_PRESSED\r\n");
+                keypad_state = STATE_IDLE; // Back to idle if no key
             }
         }
         break;
@@ -162,38 +196,63 @@ void KEY_Motor(void)
     case STATE_DEBOUNCE_RELEASE:
         if (TiGetTics(TI_KEYPAD) >= WAIT_16MS)
         {
-            // If key is still pressed, go back to idle to re-scan
-            keypad_state = is_key_pressed() ? STATE_IDLE : STATE_PROCESS_KEY;
+            if (is_key_pressed())
+            {
+                SIO_TEST_SendString("KEY_STILL_PRESSED_AFTER_RELEASE_DEBOUNCE\r\n");
+                keypad_state = STATE_IDLE; // Back to idle to re-scan
+            }
+            else
+            {
+                SIO_TEST_SendString("KEY_RELEASED_CONFIRMED\r\n");
+                keypad_state = STATE_PROCESS_KEY;
+            }
         }
         break;
 
     case STATE_PROCESS_KEY:
+        SIO_TEST_SendString("PROCESSING_KEY\r\n");
         process_detected_key(current_key);
         current_key = NO_KEY_PRESSED;
+        scanning_paused = FALSE; // Resume scanning after processing
         keypad_state = STATE_IDLE;
         break;
 
     case STATE_WAIT_SECOND_KEY:
-        scan_keypad();
+        // Continue scanning while waiting for second key
+        if (!scanning_paused)
+        {
+            scan_keypad();
+        }
+
         if (is_key_pressed())
         {
+            SIO_TEST_SendString("SECOND_KEY_DETECTED\r\n");
+            scanning_paused = TRUE; // Stop scanning while processing
             TiResetTics(TI_KEYPAD);
             keypad_state = STATE_DEBOUNCE_PRESS;
+        }
+        else if (scanning_paused && !is_key_pressed())
+        {
+            // Resume scanning if it was paused
+            SIO_TEST_SendString("RESUMING_SCAN_WAIT_SECOND\r\n");
+            scanning_paused = FALSE;
         }
         break;
 
     case STATE_WAIT_RESET_CONFIRM:
         if (!is_key_pressed())
         {
-            // Reset cancelled - back to normal operation
+            SIO_TEST_SendString("RESET_CANCELLED\r\n");
             waiting_for_second_key = FALSE;
+            scanning_paused = FALSE; // Resume scanning
             keypad_state = STATE_IDLE;
         }
         else if (TiGetTics(TI_KEYPAD) >= WAIT_3S)
         {
-            // Reset confirmed - trigger reset and back to normal operation
+            SIO_TEST_SendString("RESET_CONFIRMED\r\n");
             command_ready = KEYPAD_RESET;
             waiting_for_second_key = FALSE;
+            scanning_paused = FALSE; // Resume scanning
             keypad_state = STATE_IDLE;
         }
         break;
@@ -235,6 +294,18 @@ static void scan_keypad(void)
 {
     // Cycle through columns (C0, C1, C2)
     col_index = (col_index + 1) % KEYPAD_COLS;
+
+    // Debug: show which column we're scanning
+    BYTE col_str[10];
+    col_str[0] = 'C';
+    col_str[1] = 'O';
+    col_str[2] = 'L';
+    col_str[3] = ':';
+    col_str[4] = '0' + col_index;
+    col_str[5] = '\r';
+    col_str[6] = '\n';
+    col_str[7] = '\0';
+    SIO_TEST_SendString(col_str);
 
     // First, set all columns to inactive (easier to understand than bit masks)
     set_all_columns_inactive();
@@ -317,6 +388,8 @@ static void reset_internal_state(void)
     led_number = 0;
     led_intensity = 0;
     waiting_for_second_key = FALSE;
+    scanning_paused = FALSE; // Resume scanning on reset
+    SIO_TEST_SendString("KEYPAD_STATE_RESET\r\n");
 }
 
 // Helper functions - much easier to understand than hex masks (Java-style)
