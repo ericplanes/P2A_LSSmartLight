@@ -61,7 +61,7 @@ void main(void)
     KEY_Init();        // Keypad input
     HORA_Init();       // Time management
     RFID_Init();       // RFID card reader
-    CONTROLLER_Init(); // Main system controller
+    CONTROLLER_Init(); // Main system controller, has to be the last one
 
     init_users();
 
