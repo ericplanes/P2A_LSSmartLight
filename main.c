@@ -40,6 +40,14 @@ void RSI_High(void) // For IntelliSense only
     }
 }
 
+void init_users(void)
+{
+    EEPROM_StoreConfigForUser(0, (BYTE[]){9, 9, 9, 0, 0, 0});
+    EEPROM_StoreConfigForUser(1, (BYTE[]){9, 9, 0, 0, 0, 9});
+    EEPROM_StoreConfigForUser(2, (BYTE[]){9, 0, 0, 0, 9, 9});
+    EEPROM_StoreConfigForUser(3, (BYTE[]){0, 0, 0, 9, 9, 9});
+}
+
 /* =======================================
  *               MAIN
  * ======================================= */
@@ -56,18 +64,9 @@ void main(void)
     RFID_Init();       // RFID card reader
     CONTROLLER_Init(); // Main system controller
 
-    while (!EEPROM_StoreConfigForUser(0, (BYTE[]){0, 9, 2, 10, 0, 5}))
-        ;
-    while (!EEPROM_StoreConfigForUser(1, (BYTE[]){9, 0, 0, 0, 9, 9}))
-        ;
-    while (!EEPROM_StoreConfigForUser(2, (BYTE[]){0, 0, 9, 0, 0, 9}))
-        ;
-    while (!EEPROM_StoreConfigForUser(3, (BYTE[]){0, 0, 7, 0, 10, 9}))
-        ;
-    while (!EEPROM_StoreConfigForUser(4, (BYTE[]){0, 0, 10, 0, 0, 9}))
-        ;
+    init_users();
 
-    // Main cooperative loop
+       // Main cooperative loop
     while (TRUE)
     {
         // Run all hardware module motors
