@@ -39,7 +39,7 @@
 static BYTE keypad_state = IDLE;
 static BYTE current_key = NO_KEY_PRESSED;
 static BYTE col_index = 0;
-static BYTE command_ready = NO_COMMAND;
+static BYTE command_ready = KEY_NO_COMMAND;
 static BYTE led_number = 0;
 static BYTE led_intensity = 0;
 static BOOL waiting_for_second_key = FALSE;
@@ -60,7 +60,7 @@ static void print_detected_key(void); // For testing only
 void KEY_Init(void)
 {
     TRISA = 0xEA;
-
+    ADCON1 = 0x0F;
     set_all_columns_inactive();
     reset_internal_state();
 }
@@ -130,7 +130,7 @@ void KEY_Motor(void)
 BYTE KEY_GetCommand(void)
 {
     BYTE cmd = command_ready;
-    command_ready = NO_COMMAND;
+    command_ready = KEY_NO_COMMAND;
     return cmd;
 }
 
@@ -193,7 +193,7 @@ static void reset_internal_state(void)
     keypad_state = IDLE;
     current_key = NO_KEY_PRESSED;
     col_index = 0;
-    command_ready = NO_COMMAND;
+    command_ready = KEY_NO_COMMAND;
     led_number = 0;
     led_intensity = 0;
     waiting_for_second_key = FALSE;
