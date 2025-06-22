@@ -106,7 +106,7 @@ void CNTR_Motor(void)
         else // KEY_GetCommand() == KEYPAD_RESET
         {
             reset_system();
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
         }
         break;
 
@@ -115,7 +115,7 @@ void CNTR_Motor(void)
         {
             LED_UpdateConfig(current_config);
             LCD_WriteUserInfo(last_uid_char, current_config);
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
         }
         break;
 
@@ -131,7 +131,7 @@ void CNTR_Motor(void)
         if (user_pos == USER_NOT_FOUND)
         {
             SIO_SendUnknownCard(rfid_uid);
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
         }
         else if (user_pos == current_user_position)
         {
@@ -153,7 +153,7 @@ void CNTR_Motor(void)
             LED_UpdateConfig(current_config);
             SIO_SendDetectedCard(rfid_uid, current_config);
             LCD_WriteUserInfo(get_last_uid_char(rfid_uid), current_config);
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
         }
         break;
 
@@ -166,7 +166,7 @@ void CNTR_Motor(void)
 
         clean_config();
         LED_UpdateConfig(current_config);
-        state = INPUT_WAIT_DETECT;
+        finish_comand();
         break;
 
     case SERIAL_PROCESS_CMD:
@@ -187,11 +187,11 @@ void CNTR_Motor(void)
 
         case CMD_ESC:
             SIO_SendMainMenu();
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
             break;
 
         default:
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
             break;
         }
         break;
@@ -205,7 +205,7 @@ void CNTR_Motor(void)
         {
             SIO_SendNoUser();
         }
-        state = INPUT_WAIT_DETECT;
+        finish_comand();
         break;
 
     case SERIAL_SEND_CONFIGS:
@@ -217,7 +217,7 @@ void CNTR_Motor(void)
                 user++;
             }
         }
-        state = INPUT_WAIT_DETECT;
+        finish_comand();
         break;
 
     case SERIAL_WAIT_TIME_INPUT:
@@ -225,7 +225,7 @@ void CNTR_Motor(void)
         {
             HORA_SetTime(time_hour, time_minute);
             LCD_UpdateTime(time_hour, time_minute);
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
         }
         break;
     }
@@ -295,4 +295,10 @@ static void init_controller_variables(void)
     // Initialize arrays
     clean_uid();
     clean_config();
+}
+
+static void finish_comand(void)
+{
+    command_read = KEY_NO_COMMAND;
+    state = INPUT_WAIT_DETECT;
 }
