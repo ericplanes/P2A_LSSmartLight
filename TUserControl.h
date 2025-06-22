@@ -10,7 +10,6 @@
 #define UID_SIZE 5          // UID size in bytes
 #define USER_NOT_FOUND 0xFF // Return value when UID not found
 #define NUM_USERS 4         // Number of registered users (exceeds minimum of 3)
-#define NO_USER {0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 
 // Hard-coded accepted UIDs (5 bytes each) - as per enunciat requirement
 static const BYTE accepted_uids[NUM_USERS][UID_SIZE] = {

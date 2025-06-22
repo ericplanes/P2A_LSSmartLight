@@ -177,6 +177,7 @@ void CNTR_Motor(void)
             break;
 
         case CMD_SHOW_STORED_CONF:
+            SIO_SendTimePrompt();
             state = SERIAL_SEND_CONFIGS;
             break;
 
