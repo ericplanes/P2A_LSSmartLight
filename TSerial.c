@@ -31,8 +31,8 @@ static BYTE config_buffer[40]; // "L0: 0 - L1: 3 - L2: 9 - L3: A - L4: 0 - L5: 9
 static BOOL send_char(BYTE character);
 static void send_string(BYTE *string);
 static void clear_before_new_message(void);
-static void format_uid(const BYTE *uid, BYTE *uid_buffer);
-static void format_config(const BYTE *config, BYTE *config_buffer);
+static void format_uid(const BYTE *uid);
+static void format_config(const BYTE *config);
 static BYTE hex_char(BYTE val);
 
 /* =======================================
@@ -139,8 +139,8 @@ BYTE SIO_ReadCommand(void)
 
 void SIO_SendDetectedCard(const BYTE *uid_bytes, const BYTE *config)
 {
-    format_uid(uid_bytes, uid_buffer);
-    format_config(config, config_buffer);
+    format_uid(uid_bytes);
+    format_config(config);
 
     clear_before_new_message();
     send_string((BYTE *)"Card detected!\r\nUID: ");
@@ -158,7 +158,7 @@ void SIO_SendMainMenu(void)
 
 void SIO_SendUser(const BYTE *uid_bytes)
 {
-    format_uid(uid_bytes, uid_buffer);
+    format_uid(uid_bytes);
 
     send_string((BYTE *)msg_crlf);
     send_string((BYTE *)"Current user: UID ");
@@ -174,8 +174,8 @@ void SIO_SendNoUser(void)
 
 void SIO_SendStoredConfig(const BYTE *uid_bytes, const BYTE *config)
 {
-    format_uid(uid_bytes, uid_buffer);
-    format_config(config, config_buffer);
+    format_uid(uid_bytes);
+    format_config(config);
 
     clear_before_new_message();
     send_string((BYTE *)"UID: ");
@@ -193,7 +193,7 @@ void SIO_SendTimePrompt(void)
 
 void SIO_SendUnknownCard(const BYTE *uid_bytes)
 {
-    format_uid(uid_bytes, uid_buffer);
+    format_uid(uid_bytes);
 
     clear_before_new_message();
     send_string((BYTE *)"Card detected!\r\nUnknown UID: ");
@@ -237,7 +237,7 @@ static void clear_before_new_message(void)
     send_string((BYTE *)msg_crlf);
 }
 
-static void format_uid(const BYTE *uid, BYTE *uid_buffer)
+static void format_uid(const BYTE *uid)
 {
     BYTE pos = 0;
     for (BYTE i = 0; i < 5; i++) // UID_SIZE = 5
@@ -250,7 +250,7 @@ static void format_uid(const BYTE *uid, BYTE *uid_buffer)
     uid_buffer[pos] = '\0';
 }
 
-static void format_config(const BYTE *config, BYTE *config_buffer)
+static void format_config(const BYTE *config)
 {
     BYTE pos = 0;
     for (BYTE i = 0; i < 6; i++) // 6 LEDs
