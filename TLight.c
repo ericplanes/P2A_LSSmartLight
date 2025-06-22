@@ -15,9 +15,8 @@
 #define LED5_INDEX 5
 
 // PWM configuration
-#define WAIT_FACTOR 2
-#define MAX_TICS 10 * WAIT_FACTOR // Maximum tics for PWM cycle (1 tic each 2ms = 50 Hz)
-#define NUM_LEDS 6                // Number of LEDs to control
+#define MAX_TICS 10 // Maximum tics for PWM cycle (1 tic each 2ms = 50 Hz)
+#define NUM_LEDS 6  // Number of LEDs to control
 
 // LED status
 #define LED_OFF 0
@@ -99,7 +98,7 @@ static void update_led_pwm(BYTE led_index, BYTE brightness, WORD current_tics)
 {
     // Simple PWM logic: LED ON when current_tics < brightness
     BYTE led_state;
-    if (current_tics < (brightness * WAIT_FACTOR))
+    if (current_tics < brightness)
     {
         led_state = LED_ON;
     }
