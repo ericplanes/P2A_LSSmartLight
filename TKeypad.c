@@ -36,14 +36,14 @@
 #define STORE_KEY 4
 #define RESET_HOLD 5
 
-static BYTE keypad_state = IDLE;
-static BYTE current_key = NO_KEY_PRESSED;
-static BYTE col_index = 0;
-static BYTE command_ready = KEY_NO_COMMAND;
-static BYTE led_number = 0;
-static BYTE led_intensity = 0;
-static BOOL waiting_for_second_key = FALSE;
-static BOOL user_inside = FALSE;
+static BYTE keypad_state;
+static BYTE current_key;
+static BYTE col_index;
+static BYTE command_ready;
+static BYTE led_number;
+static BYTE led_intensity;
+static BOOL waiting_for_second_key;
+static BOOL user_inside;
 
 static void shift_keypad_rows(void);
 static BYTE is_key_pressed(void);
@@ -274,7 +274,33 @@ static void print_detected_key(void)
         detected_char = '0';
     }
 
-    static BYTE buffer[20] = "\r\nDetected Key: X\r\n";
-    buffer[16] = detected_char; // Correct index for 'X'
+    static BYTE buffer[20];
+    // Initialize buffer on first use
+    static BOOL buffer_initialized = FALSE;
+    if (!buffer_initialized)
+    {
+        buffer[0] = '\r';
+        buffer[1] = '\n';
+        buffer[2] = 'D';
+        buffer[3] = 'e';
+        buffer[4] = 't';
+        buffer[5] = 'e';
+        buffer[6] = 'c';
+        buffer[7] = 't';
+        buffer[8] = 'e';
+        buffer[9] = 'd';
+        buffer[10] = ' ';
+        buffer[11] = 'K';
+        buffer[12] = 'e';
+        buffer[13] = 'y';
+        buffer[14] = ':';
+        buffer[15] = ' ';
+        buffer[16] = detected_char;
+        buffer[17] = '\r';
+        buffer[18] = '\n';
+        buffer[19] = '\0';
+        buffer_initialized = TRUE;
+    }
+    buffer[16] = detected_char;
     SIO_TEST_SendString(buffer);
 }

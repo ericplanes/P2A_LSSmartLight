@@ -37,16 +37,16 @@
  *         PRIVATE VARIABLES
  * ======================================= */
 
-static BYTE state = INPUT_WAIT_DETECT;
-static BYTE current_user_position = USER_NOT_FOUND;
-static BYTE current_config[CONFIG_SIZE] = {0};
-static BYTE time_hour = 0, time_minute = 0;
+static BYTE state;
+static BYTE current_user_position;
+static BYTE current_config[CONFIG_SIZE];
+static BYTE time_hour, time_minute;
 
 // Processing variables
-static BYTE rfid_uid[UID_SIZE] = {0};
-static BYTE command_read = KEY_NO_COMMAND;
-static BYTE led_num = 0, led_intensity = 0;
-static BYTE user_pos = 0, users_sent = 0, last_uid_char = '-';
+static BYTE rfid_uid[UID_SIZE];
+static BYTE command_read;
+static BYTE led_num, led_intensity;
+static BYTE user_pos, users_sent, last_uid_char;
 
 /* =======================================
  *       PRIVATE FUNCTION HEADERS
@@ -56,6 +56,7 @@ static void reset_system(void);
 static void clean_config(void);
 static BYTE get_last_uid_char(const BYTE *uid);
 static void clean_uid(void);
+static void init_controller_variables(void);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -63,6 +64,7 @@ static void clean_uid(void);
 
 void CNTR_Init(void)
 {
+    init_controller_variables();
     SIO_SendMainMenu();
     LCD_WriteNoUserInfo();
 }
@@ -280,4 +282,22 @@ static BYTE get_last_uid_char(const BYTE *uid)
         return '0' + last_nibble;
     }
     return 'A' + last_nibble - 10;
+}
+
+static void init_controller_variables(void)
+{
+    state = INPUT_WAIT_DETECT;
+    current_user_position = USER_NOT_FOUND;
+    time_hour = 0;
+    time_minute = 0;
+    command_read = KEY_NO_COMMAND;
+    led_num = 0;
+    led_intensity = 0;
+    user_pos = 0;
+    users_sent = 0;
+    last_uid_char = '-';
+
+    // Initialize arrays
+    clean_uid();
+    clean_config();
 }

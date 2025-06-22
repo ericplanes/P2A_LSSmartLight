@@ -3,8 +3,8 @@
 #include "TLCD.h"
 
 // Static variables for time keeping
-static BYTE current_hour = 0;    // 0-99 hours
-static BYTE current_minutes = 0; // 0-59 minutes
+static BYTE current_hour;    // 0-99 hours
+static BYTE current_minutes; // 0-59 minutes
 
 /* =======================================
  *          PUBLIC FUNCTION BODIES
