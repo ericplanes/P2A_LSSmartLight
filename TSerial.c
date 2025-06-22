@@ -140,6 +140,16 @@ BYTE SIO_ReadCommand(void)
     case ASCII_ESC:
         return CMD_ESC;
     default:
+        // Default to understand the value of ESC key
+        static BYTE unknown[6];
+        send_string((BYTE *)"Unknown command: \r\n");
+        unknown[0] = ascii % 10 + '0';
+        unknown[1] = (ascii / 10) % 10 + '0';
+        unknown[2] = (ascii / 100) % 10 + '0';
+        unknown[3] = '\r';
+        unknown[4] = '\n';
+        unknown[5] = '\0';
+        send_string((BYTE *)unknown);
         return CMD_NO_COMMAND;
     }
 }

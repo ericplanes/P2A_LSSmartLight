@@ -4,6 +4,7 @@ nbproject/Makefile-*.mk
 nbproject/Makefile-*.properties
 dist/
 build/
+docs/ 
 
 # Fitxers de compilació
 *.hex
@@ -17,7 +18,6 @@ build/
 *.d
 *.txt
 *.pdf
-P2B*
 
 # Fitxers del sistema operatiu
 .DS_Store
