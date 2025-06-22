@@ -13,7 +13,7 @@ static BOOL is_user_equals(const BYTE *uid1, const BYTE *uid2);
  *         PUBLIC FUNCTION BODIES
  * ======================================= */
 
-BYTE USER_FindPositionByRFID(BYTE *rfid_uid)
+BYTE USER_FindPositionByRFID(const BYTE *rfid_uid)
 {
     // Search through all registered users
     for (BYTE i = 0; i < NUM_USERS; i++)

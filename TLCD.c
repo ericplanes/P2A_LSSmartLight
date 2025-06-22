@@ -140,7 +140,7 @@ void LCD_WriteNoUserInfo(void)
     write_string((const BYTE *)"2-0 3-0 4-0 5-0");
 }
 
-void LCD_WriteUserInfo(BYTE last_uid_char, BYTE *light_config)
+void LCD_WriteUserInfo(BYTE last_uid_char, const BYTE *light_config)
 {
     // Update user character (position 0,0)
     update_user_char(last_uid_char);
@@ -169,7 +169,7 @@ void LCD_UpdateTime(BYTE hour, BYTE minute)
     write_character((minute % 10) + '0');
 }
 
-void LCD_UpdateLightConfig(BYTE *light_config)
+void LCD_UpdateLightConfig(const BYTE *light_config)
 {
     // Light 1 and 2 on first line
     set_cursor_position(0, 10); // "1-X" - position of X
