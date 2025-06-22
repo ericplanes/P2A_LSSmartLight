@@ -23,8 +23,9 @@
 #define MI_NOTAGERR 1
 #define MI_ERR 2
 
-// RFID reading timing
+// RFID reading timing and retry settings
 #define RFID_SCAN_DELAY (ONE_SECOND / 2) // 500ms delay between scans
+#define RFID_RETRY_COUNT 15              // Maximum retry attempts
 
 /* =======================================
  *         PRIVATE VARIABLES
@@ -32,6 +33,7 @@
 
 // RFID card reading state machine
 static BYTE rfid_reading_state = 0;
+static BYTE retry_counter = 0;
 static BOOL rfid_card_detected = FALSE;
 static BYTE card_uid[5] = {0};
 static BYTE card_data_position = 0;
@@ -78,6 +80,7 @@ void RFID_Init(void)
 
   // Reset card reading state machine
   rfid_reading_state = 0;
+  retry_counter = 0;
   card_data_position = 0;
   rfid_card_detected = FALSE;
 
@@ -90,7 +93,11 @@ void RFID_Motor(void)
 {
   switch (rfid_reading_state)
   {
-  case 0: // Start card detection sequence
+  case 0: // Initialize card detection sequence
+    // Reset retry counter for new detection cycle
+    retry_counter = RFID_RETRY_COUNT;
+
+    // Setup MFRC522 registers for card detection
     mfrc522_write_register(BITFRAMINGREG, 0x07);
     mfrc522_write_register(COMMIENREG, 0x77 | 0x80);
     mfrc522_clear_register_bit(COMMIRQREG, 0x80);
@@ -99,28 +106,51 @@ void RFID_Motor(void)
     mfrc522_write_register(FIFODATAREG, PICC_REQIDL);
     mfrc522_write_register(COMMANDREG, PCD_TRANSCEIVE);
     mfrc522_set_register_bit(BITFRAMINGREG, 0x80);
+
     rfid_reading_state = 1;
     break;
 
-  case 1: // Wait for card response and read UID
+  case 1: // Wait for card response with retry mechanism
     if (mfrc522_read_register(COMMIRQREG) & 0x30)
     {
+      // IRQ fired - card response received
       mfrc522_clear_register_bit(BITFRAMINGREG, 0x80);
+
+      // Check for communication errors
       if (!(mfrc522_read_register(ERRORREG) & 0x1B))
       {
+        // No errors - attempt to read card UID
         if (mfrc522_read_card_uid(card_uid))
         {
+          // UID successfully read
           rfid_card_detected = TRUE;
           card_data_position = 0;
         }
       }
+
+      // Send HALT command to stop card communication
       mfrc522_halt_card_communication();
+
+      // Start delay timer and move to delay state
       TiResetTics(TI_RFID);
       rfid_reading_state = 2;
     }
+    else
+    {
+      // No IRQ yet - decrement retry counter
+      retry_counter--;
+      if (retry_counter == 0)
+      {
+        // Maximum retries reached - give up and restart cycle
+        mfrc522_clear_register_bit(BITFRAMINGREG, 0x80);
+        TiResetTics(TI_RFID);
+        rfid_reading_state = 2;
+      }
+      // Otherwise continue waiting in this state
+    }
     break;
 
-  case 2: // Wait before next scan cycle
+  case 2: // Wait before starting next scan cycle
     if (TiGetTics(TI_RFID) >= RFID_SCAN_DELAY)
     {
       rfid_reading_state = 0;
