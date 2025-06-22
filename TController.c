@@ -24,10 +24,9 @@
 #define KEY_PROCESS_CMD 1           // On keypad input - process LED update or reset
 #define KEY_STORE_CONFIG 2          // After LED update - store to EEPROM
 #define RFID_READ_CARD_DATA 3       // On card detected - read UID data
-#define RFID_VALIDATE_USER 5        // On UID complete - validate against known users
-#define RFID_USER_ENTER 6           // On valid new user - configure room
-#define RFID_USER_EXIT 7            // On same user card - user leaving
-#define RFID_LOAD_USER_CONFIG 8     // After user validation - load their config
+#define RFID_VALIDATE_USER 4        // On UID complete - validate against known users
+#define RFID_USER_EXIT 5            // On same user card - user leaving
+#define RFID_LOAD_NEW_USER_CONFIG 6 // After user validation - load their config
 #define SERIAL_PROCESS_CMD 9        // On serial input - process menu commands
 #define SERIAL_SEND_WHO_RESPONSE 10 // On "who in room" - send current user
 #define SERIAL_SEND_CONFIGS 11      // On "show configs" - send all stored configs
@@ -85,6 +84,7 @@ void CNTR_Motor(void)
             break;
         }
 
+        command_read = SIO_ReadCommand();
         if (SIO_ReadCommand() != NO_COMMAND)
         {
             state = SERIAL_PROCESS_CMD;
@@ -137,17 +137,13 @@ void CNTR_Motor(void)
         else
         {
             last_uid_char = get_last_uid_char(rfid_uid);
-            state = RFID_USER_ENTER;
+            current_user_position = user_pos;
+            KEY_SetUserInside(TRUE);
+            state = RFID_LOAD_NEW_USER_CONFIG;
         }
         break;
 
-    case RFID_USER_ENTER:
-        current_user_position = user_pos;
-        KEY_SetUserInside(TRUE);
-        state = RFID_LOAD_USER_CONFIG;
-        break;
-
-    case RFID_LOAD_USER_CONFIG:
+    case RFID_LOAD_NEW_USER_CONFIG:
         if (EEPROM_ReadConfigForUser(current_user_position, current_config))
         {
             LED_UpdateConfig(current_config);
