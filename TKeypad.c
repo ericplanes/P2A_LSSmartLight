@@ -61,9 +61,6 @@ void KEY_Init(void)
 {
     TRISA = 0xEA;
 
-    // Force analog pins to be digital
-    ADCON1 = 0x0F; // All pins digital (no analog functionality)
-
     set_all_columns_inactive();
     reset_internal_state();
 }
