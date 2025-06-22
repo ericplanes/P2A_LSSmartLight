@@ -30,7 +30,8 @@
 #define SERIAL_PROCESS_CMD 9        // On serial input - process menu commands
 #define SERIAL_SEND_WHO_RESPONSE 10 // On "who in room" - send current user
 #define SERIAL_SEND_CONFIGS 11      // On "show configs" - send all stored configs
-#define SERIAL_WAIT_TIME_INPUT 12   // After time request - wait for time data
+#define SERIAL_SEND_USER_CONFIG 12  // On "show user config" - send user config
+#define SERIAL_WAIT_TIME_INPUT 13   // After time request - wait for time data
 
 /* =======================================
  *         PRIVATE VARIABLES
@@ -205,16 +206,19 @@ void CNTR_Motor(void)
         break;
 
     case SERIAL_SEND_CONFIGS:
+        state = SERIAL_SEND_USER_CONFIG;
+        if (users_sent == NUM_USERS) // Once all users have been sent, reset the counter and stop
+        {
+            users_sent = 0;
+            state = INPUT_WAIT_DETECT;
+        }
+        break;
+
+    case SERIAL_SEND_USER_CONFIG:
         if (EEPROM_ReadConfigForUser(users_sent, current_config))
         {
             SIO_SendStoredConfig(USER_GetUserByPosition(users_sent), current_config);
             users_sent++;
-        }
-
-        if (users_sent == NUM_USERS) // Once all users have been sent, reset the counter
-        {
-            users_sent = 0;
-            state = INPUT_WAIT_DETECT;
         }
         break;
 
