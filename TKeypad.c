@@ -1,6 +1,5 @@
 #include "TKeypad.h"
 #include "TTimer.h"
-#include "TSerial.h"
 
 #define WAIT_16MS TWO_MS * 8
 #define WAIT_3S ONE_SECOND * 3
@@ -58,7 +57,6 @@ static void set_column_active(BYTE col_index);
 static void set_all_columns_inactive(void);
 static BOOL is_row_pressed(BYTE row_bit);
 static BYTE get_pressed_row(void);
-static void print_detected_key(void); // For testing only
 
 void KEY_Init(void)
 {
@@ -98,7 +96,6 @@ void KEY_Motor(void)
         break;
 
     case CHECK_KEY_VALUE:
-        print_detected_key();
         TiResetTics(TI_KEYPAD);
         keypad_state = STORE_KEY; // if key is not #, wait for release
         if (current_key == HASH_KEY)
@@ -272,46 +269,4 @@ static BYTE get_pressed_row(void)
     if (is_row_pressed(ROW3_PIN_BIT))
         return ROW3_INDEX;
     return NO_KEY_PRESSED;
-}
-
-// Method for testing only
-static void print_detected_key(void)
-{
-    BYTE detected_char;
-    if (current_key < 10)
-    {
-        detected_char = current_key + '0';
-    }
-    else if (current_key == 10)
-    {
-        detected_char = '*';
-    }
-    else if (current_key == ZERO_KEY)
-    {
-        detected_char = '0';
-    }
-    else if (current_key == HASH_KEY)
-    {
-        detected_char = '#';
-    }
-
-    static BYTE buffer[11];
-    static BOOL buffer_initialized = FALSE;
-    if (!buffer_initialized)
-    {
-        buffer[0] = '\r';
-        buffer[1] = '\n';
-        buffer[2] = 'K';
-        buffer[3] = 'E';
-        buffer[4] = 'Y';
-        buffer[5] = ':';
-        buffer[6] = ' ';
-        buffer[7] = detected_char;
-        buffer[8] = '\r';
-        buffer[9] = '\n';
-        buffer[10] = '\0';
-        buffer_initialized = TRUE;
-    }
-    buffer[7] = detected_char;
-    SIO_TEST_SendString(buffer);
 }
