@@ -6,6 +6,7 @@
 #define WAIT_3S ONE_SECOND * 3
 
 // Special key defines
+#define ZERO_KEY 11
 #define HASH_KEY 12
 #define NO_KEY_PRESSED 13
 
@@ -275,22 +276,22 @@ static void print_detected_key(void)
     BYTE detected_char;
     if (current_key < 10)
     {
-        detected_char = current_key + '0';
+        detected_char = (current_key + 1) + '0';
     }
     else if (current_key == 10)
     {
         detected_char = '*';
     }
-    else if (current_key == 12)
-    {
-        detected_char = '#';
-    }
-    else
+    else if (current_key == ZERO_KEY)
     {
         detected_char = '0';
     }
+    else if (current_key == HASH_KEY)
+    {
+        detected_char = '#';
+    }
 
-    static BYTE buffer[20];
+    static BYTE buffer[11];
     // Initialize buffer on first use
     static BOOL buffer_initialized = FALSE;
     if (!buffer_initialized)
@@ -308,6 +309,6 @@ static void print_detected_key(void)
         buffer[10] = '\0';
         buffer_initialized = TRUE;
     }
-    buffer[16] = detected_char;
+    buffer[7] = detected_char;
     SIO_TEST_SendString(buffer);
 }
