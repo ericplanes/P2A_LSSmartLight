@@ -195,14 +195,18 @@ static void store_detected_key(BYTE key)
     }
     if (is_valid_led_number(key))
     {
-        led_number = key;
+        led_number = key + 1;
+        if (key == ZERO_KEY)
+            led_number = 0;
         waiting_for_second_key = TRUE;
     }
 }
 
 static BYTE is_valid_led_number(BYTE key)
 {
-    return (key <= MAX_LED_NUMBER);
+    if (key == ZERO_KEY)
+        return TRUE;
+    return (key < MAX_LED_NUMBER);
 }
 
 static void reset_internal_state(void)
