@@ -44,7 +44,7 @@ static BYTE time_hour = 0, time_minute = 0;
 
 // Processing variables
 static BYTE rfid_uid[UID_SIZE] = {0};
-static BYTE cmd_buffer = NO_COMMAND;
+static BYTE command_read = NO_COMMAND;
 static BYTE led_num = 0, led_intensity = 0;
 static BYTE user_pos = 0, users_sent = 0, last_uid_char = '-';
 
@@ -72,7 +72,8 @@ void CNTR_Motor(void)
     switch (state)
     {
     case INPUT_WAIT_DETECT: // Waits until input detected (keypad/RFID/serial)
-        if (KEY_GetCommand() != NO_COMMAND)
+        command_read = KEY_GetCommand();
+        if (command_read != NO_COMMAND)
         {
             state = KEY_PROCESS_CMD;
             break;
@@ -92,7 +93,7 @@ void CNTR_Motor(void)
         break;
 
     case KEY_PROCESS_CMD: // On keypad input - process LED update or reset
-        if (KEY_GetCommand() == UPDATE_LED)
+        if (command_read == UPDATE_LED)
         {
             KEY_GetUpdateInfo(&led_num, &led_intensity);
             current_config[led_num] = led_intensity;
@@ -169,7 +170,7 @@ void CNTR_Motor(void)
         break;
 
     case SERIAL_PROCESS_CMD:
-        switch (cmd_buffer)
+        switch (command_read)
         {
         case CMD_WHO_IN_ROOM:
             state = SERIAL_SEND_WHO_RESPONSE;
