@@ -135,9 +135,9 @@ void LCD_WriteNoUserInfo(void)
     write_character((current_minute % 10) + '0');
 
     // Write light configuration
-    write_string((const BYTE *)" 1-0 2-0");
+    write_string((const BYTE *)" 0-0 1-0");
     set_cursor_position(1, 0);
-    write_string((const BYTE *)"3-0 4-0 5-0 6-0");
+    write_string((const BYTE *)"2-0 3-0 4-0 5-0");
 }
 
 void LCD_WriteUserInfo(BYTE last_uid_char, BYTE *light_config)
