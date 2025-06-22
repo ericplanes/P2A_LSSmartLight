@@ -35,6 +35,8 @@
 #define CHECK_KEY_VALUE 3
 #define STORE_KEY 4
 #define RESET_HOLD 5
+#define ON_KEY_RELEASE 6
+#define WAIT_FOR_RELEASE 7
 
 static BYTE keypad_state;
 static BYTE current_key;
@@ -108,7 +110,22 @@ void KEY_Motor(void)
     case STORE_KEY:
         store_detected_key(current_key);
         current_key = NO_KEY_PRESSED;
-        keypad_state = IDLE;
+        keypad_state = ON_KEY_RELEASE;
+        break;
+
+    case ON_KEY_RELEASE:
+        if (!is_key_pressed())
+        {
+            TiResetTics(TI_KEYPAD);
+            keypad_state = WAIT_FOR_RELEASE;
+        }
+        break;
+
+    case WAIT_FOR_RELEASE:
+        if (TiGetTics(TI_KEYPAD) >= WAIT_16MS)
+        {
+            keypad_state = IDLE;
+        }
         break;
 
     case RESET_HOLD:
@@ -121,7 +138,7 @@ void KEY_Motor(void)
         {
             command_ready = KEYPAD_RESET;
             waiting_for_second_key = FALSE;
-            keypad_state = IDLE;
+            keypad_state = ON_KEY_RELEASE;
         }
         break;
     }
