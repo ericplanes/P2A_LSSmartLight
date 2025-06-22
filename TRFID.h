@@ -34,55 +34,32 @@
 #define DIR_MFRC522_RST TRISDbits.TRISD0 // output (Reset)
 
 //------------------------------------------------
-// End pin definitions
+// MFRC522 Commands (only used ones)
 //-------------------------------------------------
-
-// Commands for PCD (Proximity Coupling Device) - Only used ones
 #define PCD_IDLE 0x00       // NO action; Cancel the current command
-#define PCD_AUTHENT 0x0E    // Authentication Key
 #define PCD_TRANSCEIVE 0x0C // Transmit and receive data
 #define PCD_RESETPHASE 0x0F // Reset
 #define PCD_CALCCRC 0x03    // CRC Calculate
 
-// Commands for PICC (Proximity Integrated Circuit Card) - Only used ones
 #define PICC_REQIDL 0x26   // find the antenna area does not enter hibernation
 #define PICC_ANTICOLL 0x93 // anti-collision
 #define PICC_HALT 0x50     // Sleep
 
-// Status codes
 #define MI_OK 0
 #define MI_NOTAGERR 1
 #define MI_ERR 2
 
-//------------------MFRC522 Registers (Only used ones)---------------
-// Page 0: Command and Status
+//------------------MFRC522 Registers (only used ones)---------------
 #define COMMANDREG 0x01
 #define COMMIENREG 0x02
 #define COMMIRQREG 0x04
-#define DIVIRQREG 0x05
 #define ERRORREG 0x06
-#define STATUS2REG 0x08
 #define FIFODATAREG 0x09
 #define FIFOLEVELREG 0x0A
-#define CONTROLREG 0x0C
 #define BITFRAMINGREG 0x0D
 
-// PAGE 1: Command
-#define MODEREG 0x11
-#define TXCONTROLREG 0x14
-#define TXAUTOREG 0x15
-
-// PAGE 2: CFG
-#define CRCRESULTREGM 0x21
-#define CRCRESULTREGL 0x22
-#define TMODEREG 0x2A
-#define TPRESCALERREG 0x2B
-#define TRELOADREGH 0x2C
-#define TRELOADREGL 0x2D
-
-// UID related constants
-#define RFID_UID_SIZE 5      // Size of UID in bytes
-#define RFID_UID_STR_SIZE 15 // Size of UID string (5 bytes * 2 chars + 4 dashes + null terminator)
+#define RFID_UID_LENGTH 5
+#define RFID_UID_STRING_LENGTH 15
 
 //-------------- Public interface: --------------
 void RFID_Init(void);
