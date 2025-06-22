@@ -15,7 +15,7 @@
 #define LED5_INDEX 5
 
 // PWM configuration
-#define WAIT_FACTOR 3
+#define WAIT_FACTOR 2
 #define MAX_TICS 10 * WAIT_FACTOR // Maximum tics for PWM cycle (1 tic each 2ms = 50 Hz)
 #define NUM_LEDS 6                // Number of LEDs to control
 
