@@ -209,7 +209,7 @@ void CNTR_Motor(void)
         break;
 
     case SERIAL_SEND_CONFIGS:
-        for (BYTE user = 0; user < NUM_USERS; user++)
+        for (BYTE user = 0; user < NUM_USERS;)
         {
             if (EEPROM_ReadConfigForUser(user, current_config))
             {

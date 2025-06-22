@@ -15,6 +15,7 @@ static BYTE read_byte(BYTE address);
 static void prepare_write_info(BYTE address, BYTE data);
 static void write_prepared_info(void);
 static void write_byte(BYTE address, BYTE data);
+static void check_user(BYTE user);
 
 /* =======================================
  *          PUBLIC FUNCTION BODIES
@@ -44,12 +45,7 @@ void EEPROM_CleanMemory(void)
 
 BOOL EEPROM_StoreConfigForUser(BYTE user, const BYTE *led_config)
 {
-    if (user != current_user)
-    {
-        current_user = user;
-        base_address = user * NUM_LEDS;
-    }
-
+    check_user(user);
     if (write_pos < NUM_LEDS)
     {
         write_byte(base_address + write_pos, led_config[write_pos]);
@@ -67,13 +63,7 @@ BOOL EEPROM_StoreConfigForUser(BYTE user, const BYTE *led_config)
 
 BOOL EEPROM_ReadConfigForUser(BYTE user, BYTE *led_config)
 {
-    // Only recalculate when user changes
-    if (user != current_user)
-    {
-        current_user = user;
-        base_address = user * NUM_LEDS;
-    }
-
+    check_user(user);
     if (read_pos < NUM_LEDS)
     {
         led_config[read_pos] = read_byte(base_address + read_pos);
@@ -92,6 +82,15 @@ BOOL EEPROM_ReadConfigForUser(BYTE user, BYTE *led_config)
 /* =======================================
  *          PRIVATE FUNCTION BODIES
  * ======================================= */
+
+static void check_user(BYTE user)
+{
+    if (user != current_user)
+    {
+        current_user = user;
+        base_address = user * NUM_LEDS;
+    }
+}
 
 static BYTE read_byte(BYTE address)
 {
