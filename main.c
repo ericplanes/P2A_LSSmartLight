@@ -42,9 +42,9 @@ void RSI_High(void) // For IntelliSense only
 
 void init_users(void)
 {
-    while (EEPROM_StoreConfigForUser(0, (BYTE[]){9, 9, 9, 0, 0, 0}))
+    while (EEPROM_StoreConfigForUser(0, (BYTE[]){8, 8, 8, 8, 8, 8}))
         ; // FAKE USER
-    while (EEPROM_StoreConfigForUser(2, (BYTE[]){9, 0, 0, 0, 9, 9}))
+    while (EEPROM_StoreConfigForUser(2, (BYTE[]){7, 7, 7, 7, 7, 7}))
         ; // FAKE USER
 }
 
