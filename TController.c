@@ -46,7 +46,7 @@ static BYTE time_hour, time_minute;
 static BYTE rfid_uid[UID_SIZE];
 static BYTE command_read;
 static BYTE led_num, led_intensity;
-static BYTE user_pos, users_sent, last_uid_char;
+static BYTE user_pos, last_uid_char;
 
 /* =======================================
  *       PRIVATE FUNCTION HEADERS
@@ -209,20 +209,15 @@ void CNTR_Motor(void)
         break;
 
     case SERIAL_SEND_CONFIGS:
-        state = SERIAL_SEND_USER_CONFIG;
-        if (users_sent == NUM_USERS) // Once all users have been sent, reset the counter and stop
+        for (BYTE user = 0; user < NUM_USERS; user++)
         {
-            users_sent = 0;
-            state = INPUT_WAIT_DETECT;
+            if (EEPROM_ReadConfigForUser(user, current_config))
+            {
+                SIO_SendStoredConfig(USER_GetUserByPosition(user), current_config);
+                user++;
+            }
         }
-        break;
-
-    case SERIAL_SEND_USER_CONFIG:
-        if (EEPROM_ReadConfigForUser(users_sent, current_config))
-        {
-            SIO_SendStoredConfig(USER_GetUserByPosition(users_sent), current_config);
-            users_sent++;
-        }
+        state = INPUT_WAIT_DETECT;
         break;
 
     case SERIAL_WAIT_TIME_INPUT:
@@ -295,7 +290,6 @@ static void init_controller_variables(void)
     led_num = 0;
     led_intensity = 0;
     user_pos = 0;
-    users_sent = 0;
     last_uid_char = '-';
 
     // Initialize arrays
