@@ -3,13 +3,8 @@
 #define NUM_LEDS 6
 #define MAX_USERS 42 // 256 bytes EEPROM / 6 bytes per user = 42 users max
 
-#define EEPROM_IDLE 0
-#define EEPROM_WRITING 1
-#define EEPROM_READING 2
-
 static BYTE write_pos = 0;
 static BYTE read_pos = 0;
-static BYTE eeprom_state = EEPROM_IDLE;
 static BYTE base_address;
 static BYTE current_user = 0xFF; // Invalid initial value
 
@@ -29,7 +24,6 @@ void EEPROM_Init(void)
 {
     write_pos = 0;
     read_pos = 0;
-    eeprom_state = EEPROM_IDLE;
 }
 
 void EEPROM_CleanMemory(void)
@@ -37,7 +31,6 @@ void EEPROM_CleanMemory(void)
     // Reset state variables
     write_pos = 0;
     read_pos = 0;
-    eeprom_state = EEPROM_IDLE;
 
     // Total EEPROM space used:
     BYTE total_bytes = MAX_USERS * NUM_LEDS;
@@ -51,12 +44,6 @@ void EEPROM_CleanMemory(void)
 
 BOOL EEPROM_StoreConfigForUser(BYTE user, const BYTE *led_config)
 {
-    if (eeprom_state == EEPROM_READING || EECON1bits.WR)
-        return FALSE;
-
-    eeprom_state = EEPROM_WRITING;
-
-    // Only recalculate when user changes
     if (user != current_user)
     {
         current_user = user;
@@ -72,7 +59,6 @@ BOOL EEPROM_StoreConfigForUser(BYTE user, const BYTE *led_config)
     if (write_pos == NUM_LEDS)
     {
         write_pos = 0;
-        eeprom_state = EEPROM_IDLE;
         return TRUE;
     }
 
@@ -81,11 +67,6 @@ BOOL EEPROM_StoreConfigForUser(BYTE user, const BYTE *led_config)
 
 BOOL EEPROM_ReadConfigForUser(BYTE user, BYTE *led_config)
 {
-    if (eeprom_state == EEPROM_WRITING)
-        return FALSE;
-
-    eeprom_state = EEPROM_READING;
-
     // Only recalculate when user changes
     if (user != current_user)
     {
@@ -101,7 +82,6 @@ BOOL EEPROM_ReadConfigForUser(BYTE user, BYTE *led_config)
 
     if (read_pos == NUM_LEDS)
     {
-        eeprom_state = EEPROM_IDLE;
         read_pos = 0;
         return TRUE;
     }

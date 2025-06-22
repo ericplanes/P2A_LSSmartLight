@@ -168,13 +168,6 @@ void CNTR_Motor(void)
     case RFID_LOAD_NEW_USER_CONFIG:
         if (EEPROM_ReadConfigForUser(current_user_position, current_config))
         {
-            static BYTE enter = 0;
-            if (enter == 0 || TiGetTics(TI_TEST) >= ONE_SECOND)
-            {
-                enter = 1;
-                TiResetTics(TI_TEST);
-                SIO_TEST_SendString("EEPROM_ReadConfigForUser entered");
-            }
             LED_UpdateConfig(current_config);
             SIO_SendDetectedCard(rfid_uid, current_config);
             LCD_WriteUserInfo(get_last_uid_char(rfid_uid), current_config);
