@@ -276,7 +276,7 @@ static void print_detected_key(void)
     BYTE detected_char;
     if (current_key < 10)
     {
-        detected_char = (current_key + 1) + '0';
+        detected_char = current_key + '0';
     }
     else if (current_key == 10)
     {
@@ -292,7 +292,6 @@ static void print_detected_key(void)
     }
 
     static BYTE buffer[11];
-    // Initialize buffer on first use
     static BOOL buffer_initialized = FALSE;
     if (!buffer_initialized)
     {
