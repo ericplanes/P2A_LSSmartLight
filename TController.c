@@ -57,6 +57,7 @@ static void clean_config(void);
 static BYTE get_last_uid_char(const BYTE *uid);
 static void clean_uid(void);
 static void init_controller_variables(void);
+static void finish_comand(void);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
