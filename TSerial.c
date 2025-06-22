@@ -54,9 +54,6 @@ void SIO_Init(void)
     RCSTAbits.SPEN = 1;
     RCSTAbits.CREN = 1;
     init_uid_buffer();
-    send_string("UID Buffer: ");
-    send_string(uid_buffer);
-    send_string(msg_crlf);
 }
 
 BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
