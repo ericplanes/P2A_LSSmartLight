@@ -16,7 +16,7 @@
 
 // Optimized string constants (reduced memory usage)
 static const BYTE msg_crlf[] = "\r\n";
-static const BYTE msg_main_menu[] = "---------------\r\n\tMain Menu\r\n---------------\r\n\tChoose:\r\n\t1.Who in room?\r\n\t2.Show configs\r\n\t3.Modify time\r\n Option: ";
+static const BYTE msg_main_menu[] = "---------------\r\n    Main Menu\r\n---------------\r\nChoose:\r\n    1.Who in room?\r\n    2.Show configs\r\n    3.Modify time\r\nOption: ";
 
 // Buffer for UID formatting
 static BYTE uid_buffer[15]; // 5 bytes * 2 chars + 4 dashes + null terminator
