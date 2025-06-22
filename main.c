@@ -44,7 +44,11 @@ void init_users(void)
 {
     while (EEPROM_StoreConfigForUser(0, (BYTE[]){8, 8, 8, 8, 8, 8}))
         ; // FAKE USER
+    while (EEPROM_StoreConfigForUser(1, (BYTE[]){7, 7, 7, 7, 7, 7}))
+        ; // FAKE USER
     while (EEPROM_StoreConfigForUser(2, (BYTE[]){7, 7, 7, 7, 7, 7}))
+        ; // FAKE USER
+    while (EEPROM_StoreConfigForUser(3, (BYTE[]){7, 7, 7, 7, 7, 7}))
         ; // FAKE USER
 }
 
