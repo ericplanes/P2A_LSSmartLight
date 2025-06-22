@@ -67,10 +67,29 @@ void CNTR_Init(void)
     init_controller_variables();
     SIO_SendMainMenu();
     LCD_WriteNoUserInfo();
+    TiResetTics(TI_TEST);
 }
 
 void CNTR_Motor(void)
 {
+    if (TiGetTics(TI_TEST) >= ONE_SECOND)
+    {
+        TiResetTics(TI_TEST);
+        static BYTE test[5];
+        test[0] = 's';
+        test[1] = 't';
+        test[2] = 'a';
+        test[3] = 't';
+        test[4] = 'e';
+        test[5] = ':';
+        test[6] = ' ';
+        test[7] = state;
+        test[8] = '\r';
+        test[9] = '\n';
+        test[10] = '\0';
+        SIO_TEST_SendString(test);
+    }
+
     switch (state)
     {
     case INPUT_WAIT_DETECT: // Waits until input detected (keypad/RFID/serial)
