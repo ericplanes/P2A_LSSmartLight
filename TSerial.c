@@ -34,6 +34,7 @@ static void clear_before_new_message(void);
 static void format_uid(const BYTE *uid);
 static void format_config(const BYTE *config);
 static BYTE hex_char(BYTE val);
+static void init_uid_buffer(void);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -239,15 +240,20 @@ static void clear_before_new_message(void)
 
 static void format_uid(const BYTE *uid)
 {
-    BYTE pos = 0;
-    for (BYTE i = 0; i < 5; i++) // UID_SIZE = 5
-    {
-        uid_buffer[pos++] = hex_char((uid[i] >> 4) & 0x0F);
-        uid_buffer[pos++] = hex_char(uid[i] & 0x0F);
-        if (i < 4) // UID_SIZE - 1
-            uid_buffer[pos++] = '-';
-    }
-    uid_buffer[pos] = '\0';
+    uid_buffer[0] = hex_char((uid[0] >> 4) & 0x0F);
+    uid_buffer[1] = hex_char(uid[0] & 0x0F);
+
+    uid_buffer[3] = hex_char((uid[1] >> 4) & 0x0F);
+    uid_buffer[4] = hex_char(uid[1] & 0x0F);
+
+    uid_buffer[6] = hex_char((uid[2] >> 4) & 0x0F);
+    uid_buffer[7] = hex_char(uid[2] & 0x0F);
+
+    uid_buffer[9] = hex_char((uid[3] >> 4) & 0x0F);
+    uid_buffer[10] = hex_char((uid[3] & 0x0F));
+
+    uid_buffer[12] = hex_char((uid[4] >> 4) & 0x0F);
+    uid_buffer[13] = hex_char(uid[4] & 0x0F);
 }
 
 static void format_config(const BYTE *config)
@@ -276,4 +282,23 @@ static BYTE hex_char(BYTE val)
     if (val < 10)
         return '0' + val;
     return 'A' + val - 10;
+}
+
+static void init_uid_buffer(void)
+{
+    uid_buffer[0] = 'A';
+    uid_buffer[1] = 'A';
+    uid_buffer[2] = '-';
+    uid_buffer[3] = 'B';
+    uid_buffer[4] = 'B';
+    uid_buffer[5] = '-';
+    uid_buffer[6] = 'C';
+    uid_buffer[7] = 'C';
+    uid_buffer[8] = '-';
+    uid_buffer[9] = 'D';
+    uid_buffer[10] = 'D';
+    uid_buffer[11] = '-';
+    uid_buffer[12] = 'E';
+    uid_buffer[13] = 'E';
+    uid_buffer[14] = '\0';
 }
