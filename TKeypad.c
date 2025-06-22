@@ -10,9 +10,6 @@
 #define NO_KEY_PRESSED 12
 
 // Pin assignments (PORTA)
-#define COL0_PIN_BIT 2 // A2
-#define COL1_PIN_BIT 0 // A0
-#define COL2_PIN_BIT 4 // A4
 #define ROW0_PIN_BIT 1 // A1
 #define ROW1_PIN_BIT 6 // A6
 #define ROW2_PIN_BIT 5 // A5
@@ -63,6 +60,10 @@ static void print_detected_key(void); // For testing only
 void KEY_Init(void)
 {
     TRISA = 0xEA;
+
+    // Force analog pins to be digital
+    ADCON1 = 0x0F; // All pins digital (no analog functionality)
+
     set_all_columns_inactive();
     reset_internal_state();
 }
@@ -273,6 +274,6 @@ static void print_detected_key(void)
     }
 
     static BYTE buffer[20] = "\r\nDetected Key: X\r\n";
-    buffer[15] = detected_char; // Correct index for 'X'
+    buffer[16] = detected_char; // Correct index for 'X'
     SIO_TEST_SendString(buffer);
 }
