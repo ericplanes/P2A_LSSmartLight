@@ -206,6 +206,13 @@ void SIO_SendUnknownCard(const BYTE *uid_bytes)
     send_string((BYTE *)"\r\nCard not recognized. Ignored.\r\n");
 }
 
+void SIO_SendKeyReset(void)
+{
+    clear_before_new_message();
+    send_string((BYTE *)"\r\nKeypad RESET Triggered! Cleaning up...\r\n");
+    SIO_SendMainMenu();
+}
+
 /* =======================================
  *        PRIVATE FUNCTION BODIES
  * ======================================= */

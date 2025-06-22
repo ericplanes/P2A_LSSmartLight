@@ -246,6 +246,7 @@ static void reset_system(void)
     LED_UpdateConfig(current_config);
     LCD_WriteNoUserInfo();
     KEY_SetUserInside(FALSE);
+    SIO_SendKeyReset();
 }
 
 static void clean_uid(void)
