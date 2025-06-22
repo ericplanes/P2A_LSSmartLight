@@ -53,6 +53,7 @@ void SIO_Init(void)
     TXSTAbits.TXEN = 1;
     RCSTAbits.SPEN = 1;
     RCSTAbits.CREN = 1;
+    init_uid_buffer();
 }
 
 BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
