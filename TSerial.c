@@ -113,11 +113,6 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
     return FALSE;
 }
 
-void SIO_TEST_SendString(BYTE *string)
-{
-    send_string(string);
-}
-
 BYTE SIO_ReadCommand(void)
 {
     if (!PIR1bits.RC1IF)
@@ -208,8 +203,7 @@ void SIO_SendUnknownCard(const BYTE *uid_bytes)
 
 void SIO_SendKeyReset(void)
 {
-    clear_before_new_message();
-    send_string((BYTE *)"\r\nKeypad RESET Triggered! Cleaning up...\r\n");
+    send_string((BYTE *)"\r\nKeypad RESET Triggered! Cleaning up...");
     SIO_SendMainMenu();
 }
 

@@ -84,9 +84,6 @@ void SIO_SendUnknownCard(const BYTE *uid_bytes);
 // Pre: uid_bytes points to 5-byte UID array
 // Post: Sends unknown card message to PC
 
-// For testing purposes
-void SIO_TEST_SendString(BYTE *string);
-
 void SIO_SendKeyReset(void);
 // Post: Sends keypad reset message to PC
 
