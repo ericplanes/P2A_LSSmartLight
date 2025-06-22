@@ -86,7 +86,7 @@ void CNTR_Motor(void)
         }
 
         command_read = SIO_ReadCommand();
-        if (SIO_ReadCommand() != NO_COMMAND)
+        if (command_read != NO_COMMAND)
         {
             state = SERIAL_PROCESS_CMD;
             break;
