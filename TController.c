@@ -122,6 +122,7 @@ void CNTR_Motor(void)
     case RFID_READ_CARD_DATA:
         if (RFID_GetReadUserId(rfid_uid))
         {
+            SIO_SendDetectedCard(rfid_uid, current_config);
             state = RFID_VALIDATE_USER;
         }
         break;
