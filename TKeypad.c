@@ -189,6 +189,8 @@ static void store_detected_key(BYTE key)
     if (waiting_for_second_key)
     {
         led_intensity = key;
+        if (key == ZERO_KEY)
+            led_intensity = 0;
         command_ready = UPDATE_LED;
         waiting_for_second_key = FALSE;
         return;

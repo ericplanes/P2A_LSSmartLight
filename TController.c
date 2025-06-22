@@ -302,4 +302,7 @@ static void finish_comand(void)
 {
     command_read = KEY_NO_COMMAND;
     state = INPUT_WAIT_DETECT;
+    TiResetTics(TI_CNTR);
+    while (TiGetTics(TI_CNTR) < 1)
+        ; // Add 2ms wait to ensure the command is finished
 }
