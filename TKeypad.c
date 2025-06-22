@@ -129,15 +129,14 @@ void KEY_Motor(void)
 
 BYTE KEY_GetCommand(void)
 {
-    BYTE cmd = command_ready;
-    command_ready = KEY_NO_COMMAND;
-    return cmd;
+    return command_ready;
 }
 
 void KEY_GetUpdateInfo(BYTE *led, BYTE *intensity)
 {
     *led = led_number;
     *intensity = led_intensity;
+    command_ready = KEY_NO_COMMAND;
 }
 
 void KEY_SetUserInside(BOOL inside)
