@@ -6,8 +6,8 @@
 #define WAIT_3S ONE_SECOND * 3
 
 // Special key defines
-#define HASH_KEY 11
-#define NO_KEY_PRESSED 12
+#define HASH_KEY 12
+#define NO_KEY_PRESSED 13
 
 // Pin assignments (PORTA)
 #define ROW0_PIN_BIT 1 // A1
@@ -281,24 +281,15 @@ static void print_detected_key(void)
     {
         buffer[0] = '\r';
         buffer[1] = '\n';
-        buffer[2] = 'D';
-        buffer[3] = 'e';
-        buffer[4] = 't';
-        buffer[5] = 'e';
-        buffer[6] = 'c';
-        buffer[7] = 't';
-        buffer[8] = 'e';
-        buffer[9] = 'd';
-        buffer[10] = ' ';
-        buffer[11] = 'K';
-        buffer[12] = 'e';
-        buffer[13] = 'y';
-        buffer[14] = ':';
-        buffer[15] = ' ';
-        buffer[16] = detected_char;
-        buffer[17] = '\r';
-        buffer[18] = '\n';
-        buffer[19] = '\0';
+        buffer[2] = 'K';
+        buffer[3] = 'E';
+        buffer[4] = 'Y';
+        buffer[5] = ':';
+        buffer[6] = ' ';
+        buffer[7] = detected_char;
+        buffer[8] = '\r';
+        buffer[9] = '\n';
+        buffer[10] = '\0';
         buffer_initialized = TRUE;
     }
     buffer[16] = detected_char;
