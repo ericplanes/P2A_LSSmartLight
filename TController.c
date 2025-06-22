@@ -44,7 +44,7 @@ static BYTE time_hour = 0, time_minute = 0;
 
 // Processing variables
 static BYTE rfid_uid[UID_SIZE] = {0};
-static BYTE command_read = NO_COMMAND;
+static BYTE command_read = KEY_NO_COMMAND;
 static BYTE led_num = 0, led_intensity = 0;
 static BYTE user_pos = 0, users_sent = 0, last_uid_char = '-';
 
@@ -73,7 +73,7 @@ void CNTR_Motor(void)
     {
     case INPUT_WAIT_DETECT: // Waits until input detected (keypad/RFID/serial)
         command_read = KEY_GetCommand();
-        if (command_read != NO_COMMAND)
+        if (command_read != KEY_NO_COMMAND)
         {
             state = KEY_PROCESS_CMD;
             break;
@@ -86,7 +86,7 @@ void CNTR_Motor(void)
         }
 
         command_read = SIO_ReadCommand();
-        if (command_read != NO_COMMAND)
+        if (command_read != CMD_NO_COMMAND)
         {
             state = SERIAL_PROCESS_CMD;
             break;
