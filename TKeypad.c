@@ -265,9 +265,13 @@ static void print_detected_key(void)
     {
         detected_char = '*';
     }
-    else
+    else if (current_key == 12)
     {
         detected_char = '#';
+    }
+    else
+    {
+        detected_char = '0';
     }
 
     static BYTE buffer[20] = "\r\nDetected Key: X\r\n";
