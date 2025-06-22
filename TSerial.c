@@ -63,6 +63,7 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
         return FALSE;
 
     BYTE received_char = RCREG;
+    send_char(received_char);
 
     switch (state)
     {

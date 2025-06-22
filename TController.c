@@ -27,11 +27,10 @@
 #define RFID_VALIDATE_USER 4        // On UID complete - validate against known users
 #define RFID_USER_EXIT 5            // On same user card - user leaving
 #define RFID_LOAD_NEW_USER_CONFIG 6 // After user validation - load their config
-#define SERIAL_PROCESS_CMD 9        // On serial input - process menu commands
-#define SERIAL_SEND_WHO_RESPONSE 10 // On "who in room" - send current user
-#define SERIAL_SEND_CONFIGS 11      // On "show configs" - send all stored configs
-#define SERIAL_SEND_USER_CONFIG 12  // On "show user config" - send user config
-#define SERIAL_WAIT_TIME_INPUT 13   // After time request - wait for time data
+#define SERIAL_PROCESS_CMD 7        // On serial input - process menu commands
+#define SERIAL_SEND_WHO_RESPONSE 8  // On "who in room" - send current user
+#define SERIAL_SEND_CONFIGS 9       // On "show configs" - send all stored configs
+#define SERIAL_WAIT_TIME_INPUT 10   // After time request - wait for time data
 
 /* =======================================
  *         PRIVATE VARIABLES
