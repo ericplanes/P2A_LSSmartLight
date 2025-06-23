@@ -3,6 +3,8 @@
 /* =======================================
  *         PRIVATE CONSTANTS
  * ======================================= */
+#define UID_BASE_STRING "AA-BB-CC-DD-EE"
+#define CONFIG_BUFFER_SIZE sizeof("L0: 0 - L1: 3 - L2: 9 - L3: A - L4: 0 - L5: 9")
 
 // SIO_ReadTime state machine states
 #define TIME_STATE_HOUR_FIRST 0
@@ -19,10 +21,10 @@ static const BYTE msg_crlf[] = "\r\n";
 static const BYTE msg_main_menu[] = "---------------\r\n    Main Menu\r\n---------------\r\nChoose:\r\n    1.Who in room?\r\n    2.Show configs\r\n    3.Modify time\r\nOption: ";
 
 // Buffer for UID formatting
-static BYTE uid_buffer[15]; // 5 bytes * 2 chars + 4 dashes + null terminator
+static BYTE uid_buffer[] = UID_BASE_STRING;
 
 // Buffer for config formatting
-static BYTE config_buffer[40]; // "L0: 0 - L1: 3 - L2: 9 - L3: A - L4: 0 - L5: 9" + null terminator
+static BYTE config_buffer[CONFIG_BUFFER_SIZE];
 
 /* =======================================
  *        PRIVATE FUNCTION HEADERS
@@ -34,7 +36,6 @@ static void clear_before_new_message(void);
 static void format_uid(const BYTE *uid);
 static void format_config(const BYTE *config);
 static BYTE hex_char(BYTE val);
-static void init_uid_buffer(void);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -53,7 +54,6 @@ void SIO_Init(void)
     TXSTAbits.TXEN = 1;
     RCSTAbits.SPEN = 1;
     RCSTAbits.CREN = 1;
-    init_uid_buffer();
 }
 
 BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
@@ -283,23 +283,4 @@ static BYTE hex_char(BYTE val)
     if (val < 10)
         return '0' + val;
     return 'A' + val - 10;
-}
-
-static void init_uid_buffer(void)
-{
-    uid_buffer[0] = 'A';
-    uid_buffer[1] = 'A';
-    uid_buffer[2] = '-';
-    uid_buffer[3] = 'B';
-    uid_buffer[4] = 'B';
-    uid_buffer[5] = '-';
-    uid_buffer[6] = 'C';
-    uid_buffer[7] = 'C';
-    uid_buffer[8] = '-';
-    uid_buffer[9] = 'D';
-    uid_buffer[10] = 'D';
-    uid_buffer[11] = '-';
-    uid_buffer[12] = 'E';
-    uid_buffer[13] = 'E';
-    uid_buffer[14] = '\0';
 }

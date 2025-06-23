@@ -6,7 +6,7 @@
 static BYTE write_pos = 0;
 static BYTE read_pos = 0;
 static BYTE base_address;
-static BYTE current_user = 0xFF; // Invalid initial value
+static BYTE current_user;
 
 /* =======================================
  *       PRIVATE FUNCTION HEADERS
@@ -25,6 +25,7 @@ void EEPROM_Init(void)
 {
     write_pos = 0;
     read_pos = 0;
+    current_user = 0xFF;
 }
 
 void EEPROM_CleanMemory(void)
@@ -32,6 +33,7 @@ void EEPROM_CleanMemory(void)
     // Reset state variables
     write_pos = 0;
     read_pos = 0;
+    current_user = 0xFF;
 
     // Total EEPROM space used:
     BYTE total_bytes = MAX_USERS * NUM_LEDS;
@@ -46,6 +48,7 @@ void EEPROM_CleanMemory(void)
 BOOL EEPROM_StoreConfigForUser(BYTE user, const BYTE *led_config)
 {
     check_user(user);
+
     if (write_pos < NUM_LEDS)
     {
         write_byte(base_address + write_pos, led_config[write_pos]);
@@ -64,6 +67,7 @@ BOOL EEPROM_StoreConfigForUser(BYTE user, const BYTE *led_config)
 BOOL EEPROM_ReadConfigForUser(BYTE user, BYTE *led_config)
 {
     check_user(user);
+
     if (read_pos < NUM_LEDS)
     {
         led_config[read_pos] = read_byte(base_address + read_pos);
@@ -89,6 +93,8 @@ static void check_user(BYTE user)
     {
         current_user = user;
         base_address = user * NUM_LEDS;
+        write_pos = 0;
+        read_pos = 0;
     }
 }
 
