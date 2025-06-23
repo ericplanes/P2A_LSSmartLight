@@ -16,7 +16,7 @@
 
 // Optimized string constants (reduced memory usage)
 static const BYTE msg_crlf[] = "\r\n";
-static const BYTE msg_main_menu[] = "---------------\r\nMain Menu\r\n---------------\r\nChoose:\r\n1.Who in room?\r\n2.Show configs\r\n3.Modify time\r\nOption: ";
+static const BYTE msg_main_menu[] = "---------------\r\n    Main Menu\r\n---------------\r\nChoose:\r\n    1.Who in room?\r\n    2.Show configs\r\n    3.Modify time\r\nOption: ";
 
 // Buffer for UID formatting
 static BYTE uid_buffer[15]; // 5 bytes * 2 chars + 4 dashes + null terminator
@@ -31,9 +31,10 @@ static BYTE config_buffer[40]; // "L0: 0 - L1: 3 - L2: 9 - L3: A - L4: 0 - L5: 9
 static BOOL send_char(BYTE character);
 static void send_string(BYTE *string);
 static void clear_before_new_message(void);
-static void format_uid(const BYTE *uid, BYTE *uid_buffer);
-static void format_config(const BYTE *config, BYTE *config_buffer);
+static void format_uid(const BYTE *uid);
+static void format_config(const BYTE *config);
 static BYTE hex_char(BYTE val);
+static void init_uid_buffer(void);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -52,6 +53,7 @@ void SIO_Init(void)
     TXSTAbits.TXEN = 1;
     RCSTAbits.SPEN = 1;
     RCSTAbits.CREN = 1;
+    init_uid_buffer();
 }
 
 BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
@@ -63,6 +65,7 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
         return FALSE;
 
     BYTE received_char = RCREG;
+    send_char(received_char);
 
     switch (state)
     {
@@ -71,7 +74,6 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
         {
             hour_chars[0] = received_char;
             state = TIME_STATE_HOUR_SECOND;
-            send_char(received_char);
         }
         break;
 
@@ -83,7 +85,6 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
             while (!send_char(':'))
                 ;
             state = TIME_STATE_MIN_FIRST;
-            send_char(received_char);
         }
         break;
 
@@ -92,7 +93,6 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
         {
             min_chars[0] = received_char;
             state = TIME_STATE_MIN_SECOND;
-            send_char(received_char);
         }
         break;
 
@@ -105,7 +105,6 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
 
             // Reset state for next time
             state = TIME_STATE_HOUR_FIRST;
-            send_char(received_char);
             clear_before_new_message();
             send_string((BYTE *)"Time updated successfully.\r\n");
             return TRUE;
@@ -116,17 +115,13 @@ BOOL SIO_ReadTime(BYTE *hour, BYTE *mins)
     return FALSE;
 }
 
-void SIO_TEST_SendString(BYTE *string)
-{
-    send_string(string);
-}
-
 BYTE SIO_ReadCommand(void)
 {
     if (!PIR1bits.RC1IF)
         return CMD_NO_COMMAND;
 
     BYTE ascii = RCREG;
+    send_char(ascii);
 
     // Check for valid commands using switch
     switch (ascii)
@@ -140,24 +135,14 @@ BYTE SIO_ReadCommand(void)
     case ASCII_ESC:
         return CMD_ESC;
     default:
-        // Default to understand the value of ESC key
-        static BYTE unknown[6];
-        send_string((BYTE *)"Unknown command: \r\n");
-        unknown[0] = ascii % 10 + '0';
-        unknown[1] = (ascii / 10) % 10 + '0';
-        unknown[2] = (ascii / 100) % 10 + '0';
-        unknown[3] = '\r';
-        unknown[4] = '\n';
-        unknown[5] = '\0';
-        send_string((BYTE *)unknown);
         return CMD_NO_COMMAND;
     }
 }
 
 void SIO_SendDetectedCard(const BYTE *uid_bytes, const BYTE *config)
 {
-    format_uid(uid_bytes, uid_buffer);
-    format_config(config, config_buffer);
+    format_uid(uid_bytes);
+    format_config(config);
 
     clear_before_new_message();
     send_string((BYTE *)"Card detected!\r\nUID: ");
@@ -175,7 +160,7 @@ void SIO_SendMainMenu(void)
 
 void SIO_SendUser(const BYTE *uid_bytes)
 {
-    format_uid(uid_bytes, uid_buffer);
+    format_uid(uid_bytes);
 
     send_string((BYTE *)msg_crlf);
     send_string((BYTE *)"Current user: UID ");
@@ -191,8 +176,8 @@ void SIO_SendNoUser(void)
 
 void SIO_SendStoredConfig(const BYTE *uid_bytes, const BYTE *config)
 {
-    format_uid(uid_bytes, uid_buffer);
-    format_config(config, config_buffer);
+    format_uid(uid_bytes);
+    format_config(config);
 
     clear_before_new_message();
     send_string((BYTE *)"UID: ");
@@ -210,12 +195,18 @@ void SIO_SendTimePrompt(void)
 
 void SIO_SendUnknownCard(const BYTE *uid_bytes)
 {
-    format_uid(uid_bytes, uid_buffer);
+    format_uid(uid_bytes);
 
     clear_before_new_message();
     send_string((BYTE *)"Card detected!\r\nUnknown UID: ");
     send_string(uid_buffer);
     send_string((BYTE *)"\r\nCard not recognized. Ignored.\r\n");
+}
+
+void SIO_SendKeyReset(void)
+{
+    send_string((BYTE *)"\r\nKeypad RESET Triggered! Cleaning up...");
+    SIO_SendMainMenu();
 }
 
 /* =======================================
@@ -248,20 +239,25 @@ static void clear_before_new_message(void)
     send_string((BYTE *)msg_crlf);
 }
 
-static void format_uid(const BYTE *uid, BYTE *uid_buffer)
+static void format_uid(const BYTE *uid)
 {
-    BYTE pos = 0;
-    for (BYTE i = 0; i < 5; i++) // UID_SIZE = 5
-    {
-        uid_buffer[pos++] = hex_char((uid[i] >> 4) & 0x0F);
-        uid_buffer[pos++] = hex_char(uid[i] & 0x0F);
-        if (i < 4) // UID_SIZE - 1
-            uid_buffer[pos++] = '-';
-    }
-    uid_buffer[pos] = '\0';
+    uid_buffer[0] = hex_char((uid[0] >> 4) & 0x0F);
+    uid_buffer[1] = hex_char(uid[0] & 0x0F);
+
+    uid_buffer[3] = hex_char((uid[1] >> 4) & 0x0F);
+    uid_buffer[4] = hex_char(uid[1] & 0x0F);
+
+    uid_buffer[6] = hex_char((uid[2] >> 4) & 0x0F);
+    uid_buffer[7] = hex_char(uid[2] & 0x0F);
+
+    uid_buffer[9] = hex_char((uid[3] >> 4) & 0x0F);
+    uid_buffer[10] = hex_char((uid[3] & 0x0F));
+
+    uid_buffer[12] = hex_char((uid[4] >> 4) & 0x0F);
+    uid_buffer[13] = hex_char(uid[4] & 0x0F);
 }
 
-static void format_config(const BYTE *config, BYTE *config_buffer)
+static void format_config(const BYTE *config)
 {
     BYTE pos = 0;
     for (BYTE i = 0; i < 6; i++) // 6 LEDs
@@ -287,4 +283,23 @@ static BYTE hex_char(BYTE val)
     if (val < 10)
         return '0' + val;
     return 'A' + val - 10;
+}
+
+static void init_uid_buffer(void)
+{
+    uid_buffer[0] = 'A';
+    uid_buffer[1] = 'A';
+    uid_buffer[2] = '-';
+    uid_buffer[3] = 'B';
+    uid_buffer[4] = 'B';
+    uid_buffer[5] = '-';
+    uid_buffer[6] = 'C';
+    uid_buffer[7] = 'C';
+    uid_buffer[8] = '-';
+    uid_buffer[9] = 'D';
+    uid_buffer[10] = 'D';
+    uid_buffer[11] = '-';
+    uid_buffer[12] = 'E';
+    uid_buffer[13] = 'E';
+    uid_buffer[14] = '\0';
 }

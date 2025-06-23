@@ -1,18 +1,15 @@
 #include "TKeypad.h"
 #include "TTimer.h"
-#include "TSerial.h"
 
 #define WAIT_16MS TWO_MS * 8
 #define WAIT_3S ONE_SECOND * 3
 
 // Special key defines
-#define HASH_KEY 11
-#define NO_KEY_PRESSED 12
+#define ZERO_KEY 11
+#define HASH_KEY 12
+#define NO_KEY_PRESSED 13
 
 // Pin assignments (PORTA)
-#define COL0_PIN_BIT 2 // A2
-#define COL1_PIN_BIT 0 // A0
-#define COL2_PIN_BIT 4 // A4
 #define ROW0_PIN_BIT 1 // A1
 #define ROW1_PIN_BIT 6 // A6
 #define ROW2_PIN_BIT 5 // A5
@@ -38,15 +35,17 @@
 #define CHECK_KEY_VALUE 3
 #define STORE_KEY 4
 #define RESET_HOLD 5
+#define ON_KEY_RELEASE 6
+#define WAIT_FOR_RELEASE 7
 
-static BYTE keypad_state = IDLE;
-static BYTE current_key = NO_KEY_PRESSED;
-static BYTE col_index = 0;
-static BYTE command_ready = NO_COMMAND;
-static BYTE led_number = 0;
-static BYTE led_intensity = 0;
-static BOOL waiting_for_second_key = FALSE;
-static BOOL user_inside = FALSE;
+static BYTE keypad_state;
+static BYTE current_key;
+static BYTE col_index;
+static BYTE command_ready;
+static BYTE led_number;
+static BYTE led_intensity;
+static BOOL waiting_for_second_key;
+static BOOL user_inside;
 
 static void shift_keypad_rows(void);
 static BYTE is_key_pressed(void);
@@ -58,11 +57,11 @@ static void set_column_active(BYTE col_index);
 static void set_all_columns_inactive(void);
 static BOOL is_row_pressed(BYTE row_bit);
 static BYTE get_pressed_row(void);
-static void print_detected_key(void); // For testing only
 
 void KEY_Init(void)
 {
     TRISA = 0xEA;
+    ADCON1 = 0x0F;
     set_all_columns_inactive();
     reset_internal_state();
 }
@@ -97,7 +96,6 @@ void KEY_Motor(void)
         break;
 
     case CHECK_KEY_VALUE:
-        print_detected_key();
         TiResetTics(TI_KEYPAD);
         keypad_state = STORE_KEY; // if key is not #, wait for release
         if (current_key == HASH_KEY)
@@ -110,7 +108,22 @@ void KEY_Motor(void)
     case STORE_KEY:
         store_detected_key(current_key);
         current_key = NO_KEY_PRESSED;
-        keypad_state = IDLE;
+        keypad_state = ON_KEY_RELEASE;
+        break;
+
+    case ON_KEY_RELEASE:
+        if (!is_key_pressed())
+        {
+            TiResetTics(TI_KEYPAD);
+            keypad_state = WAIT_FOR_RELEASE;
+        }
+        break;
+
+    case WAIT_FOR_RELEASE:
+        if (TiGetTics(TI_KEYPAD) >= WAIT_16MS)
+        {
+            keypad_state = IDLE;
+        }
         break;
 
     case RESET_HOLD:
@@ -123,7 +136,7 @@ void KEY_Motor(void)
         {
             command_ready = KEYPAD_RESET;
             waiting_for_second_key = FALSE;
-            keypad_state = IDLE;
+            keypad_state = ON_KEY_RELEASE;
         }
         break;
     }
@@ -131,15 +144,14 @@ void KEY_Motor(void)
 
 BYTE KEY_GetCommand(void)
 {
-    BYTE cmd = command_ready;
-    command_ready = NO_COMMAND;
-    return cmd;
+    return command_ready;
 }
 
 void KEY_GetUpdateInfo(BYTE *led, BYTE *intensity)
 {
     *led = led_number;
     *intensity = led_intensity;
+    command_ready = KEY_NO_COMMAND;
 }
 
 void KEY_SetUserInside(BOOL inside)
@@ -174,6 +186,8 @@ static void store_detected_key(BYTE key)
     if (waiting_for_second_key)
     {
         led_intensity = key;
+        if (key == ZERO_KEY)
+            led_intensity = 0;
         command_ready = UPDATE_LED;
         waiting_for_second_key = FALSE;
         return;
@@ -181,13 +195,15 @@ static void store_detected_key(BYTE key)
     if (is_valid_led_number(key))
     {
         led_number = key;
+        if (key == ZERO_KEY)
+            led_number = 0;
         waiting_for_second_key = TRUE;
     }
 }
 
 static BYTE is_valid_led_number(BYTE key)
 {
-    return (key <= MAX_LED_NUMBER);
+    return (key <= MAX_LED_NUMBER) || (key == ZERO_KEY);
 }
 
 static void reset_internal_state(void)
@@ -195,7 +211,7 @@ static void reset_internal_state(void)
     keypad_state = IDLE;
     current_key = NO_KEY_PRESSED;
     col_index = 0;
-    command_ready = NO_COMMAND;
+    command_ready = KEY_NO_COMMAND;
     led_number = 0;
     led_intensity = 0;
     waiting_for_second_key = FALSE;
@@ -253,26 +269,4 @@ static BYTE get_pressed_row(void)
     if (is_row_pressed(ROW3_PIN_BIT))
         return ROW3_INDEX;
     return NO_KEY_PRESSED;
-}
-
-// Method for testing only
-static void print_detected_key(void)
-{
-    BYTE detected_char;
-    if (current_key < 10)
-    {
-        detected_char = current_key + '0';
-    }
-    else if (current_key == 10)
-    {
-        detected_char = '*';
-    }
-    else
-    {
-        detected_char = '#';
-    }
-
-    static BYTE buffer[20] = "\r\nDetected Key: X\r\n";
-    buffer[15] = detected_char; // Correct index for 'X'
-    SIO_TEST_SendString(buffer);
 }

@@ -60,7 +60,6 @@ static void mfrc522_calculate_crc(BYTE *data_in, BYTE length, BYTE *data_out);
 static BYTE mfrc522_anticollision_detection(BYTE *serial_number);
 static BYTE mfrc522_read_card_uid(BYTE *uid_buffer);
 static void mfrc522_halt_card_communication(void);
-static void fake_rfid_read(void);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -86,7 +85,6 @@ void RFID_Init(void)
 
   // Reset RFID timer for cooperative operation
   TiResetTics(TI_RFID);
-  fake_rfid_read(); // for testing purposes
 }
 
 void RFID_Motor(void)
@@ -181,19 +179,6 @@ BOOL RFID_GetReadUserId(BYTE *user_uid_buffer)
   rfid_card_detected = FALSE;
   card_data_position = 0;
   return TRUE;
-}
-
-void fake_rfid_read(void)
-{
-  rfid_card_detected = TRUE;
-  card_data_position = 0;
-
-  static BYTE user_index = 1;
-  card_uid[0] = accepted_uids[user_index][0];
-  card_uid[1] = accepted_uids[user_index][1];
-  card_uid[2] = accepted_uids[user_index][2];
-  card_uid[3] = accepted_uids[user_index][3];
-  card_uid[4] = accepted_uids[user_index][4];
 }
 
 /* =======================================

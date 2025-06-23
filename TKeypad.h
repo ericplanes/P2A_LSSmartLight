@@ -6,7 +6,7 @@
 #include <pic18f4321.h>
 
 // Command types returned by KEY_GetCommand()
-#define NO_COMMAND 0
+#define KEY_NO_COMMAND 0
 #define UPDATE_LED 1
 #define KEYPAD_RESET 2
 

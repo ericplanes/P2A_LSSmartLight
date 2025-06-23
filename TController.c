@@ -27,26 +27,25 @@
 #define RFID_VALIDATE_USER 4        // On UID complete - validate against known users
 #define RFID_USER_EXIT 5            // On same user card - user leaving
 #define RFID_LOAD_NEW_USER_CONFIG 6 // After user validation - load their config
-#define SERIAL_PROCESS_CMD 9        // On serial input - process menu commands
-#define SERIAL_SEND_WHO_RESPONSE 10 // On "who in room" - send current user
-#define SERIAL_SEND_CONFIGS 11      // On "show configs" - send all stored configs
-#define SERIAL_SEND_USER_CONFIG 12  // On "show user config" - send user config
-#define SERIAL_WAIT_TIME_INPUT 13   // After time request - wait for time data
+#define SERIAL_PROCESS_CMD 7        // On serial input - process menu commands
+#define SERIAL_SEND_WHO_RESPONSE 8  // On "who in room" - send current user
+#define SERIAL_SEND_CONFIGS 9       // On "show configs" - send all stored configs
+#define SERIAL_WAIT_TIME_INPUT 10   // After time request - wait for time data
 
 /* =======================================
  *         PRIVATE VARIABLES
  * ======================================= */
 
-static BYTE state = INPUT_WAIT_DETECT;
-static BYTE current_user_position = USER_NOT_FOUND;
-static BYTE current_config[CONFIG_SIZE] = {0};
-static BYTE time_hour = 0, time_minute = 0;
+static BYTE state;
+static BYTE current_user_position;
+static BYTE current_config[CONFIG_SIZE];
+static BYTE time_hour, time_minute;
 
 // Processing variables
-static BYTE rfid_uid[UID_SIZE] = {0};
-static BYTE command_read = NO_COMMAND;
-static BYTE led_num = 0, led_intensity = 0;
-static BYTE user_pos = 0, users_sent = 0, last_uid_char = '-';
+static BYTE rfid_uid[UID_SIZE];
+static BYTE command_read;
+static BYTE led_num, led_intensity;
+static BYTE user_pos, last_uid_char;
 
 /* =======================================
  *       PRIVATE FUNCTION HEADERS
@@ -56,6 +55,8 @@ static void reset_system(void);
 static void clean_config(void);
 static BYTE get_last_uid_char(const BYTE *uid);
 static void clean_uid(void);
+static void init_controller_variables(void);
+static void finish_comand(void);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -63,8 +64,10 @@ static void clean_uid(void);
 
 void CNTR_Init(void)
 {
+    init_controller_variables();
     SIO_SendMainMenu();
     LCD_WriteNoUserInfo();
+    TiResetTics(TI_TEST);
 }
 
 void CNTR_Motor(void)
@@ -73,7 +76,7 @@ void CNTR_Motor(void)
     {
     case INPUT_WAIT_DETECT: // Waits until input detected (keypad/RFID/serial)
         command_read = KEY_GetCommand();
-        if (command_read != NO_COMMAND)
+        if (command_read != KEY_NO_COMMAND && command_read != CMD_NO_COMMAND)
         {
             state = KEY_PROCESS_CMD;
             break;
@@ -86,7 +89,7 @@ void CNTR_Motor(void)
         }
 
         command_read = SIO_ReadCommand();
-        if (SIO_ReadCommand() != NO_COMMAND)
+        if (command_read != KEY_NO_COMMAND && command_read != CMD_NO_COMMAND)
         {
             state = SERIAL_PROCESS_CMD;
             break;
@@ -103,7 +106,7 @@ void CNTR_Motor(void)
         else // KEY_GetCommand() == KEYPAD_RESET
         {
             reset_system();
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
         }
         break;
 
@@ -112,7 +115,7 @@ void CNTR_Motor(void)
         {
             LED_UpdateConfig(current_config);
             LCD_WriteUserInfo(last_uid_char, current_config);
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
         }
         break;
 
@@ -128,7 +131,7 @@ void CNTR_Motor(void)
         if (user_pos == USER_NOT_FOUND)
         {
             SIO_SendUnknownCard(rfid_uid);
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
         }
         else if (user_pos == current_user_position)
         {
@@ -150,7 +153,7 @@ void CNTR_Motor(void)
             LED_UpdateConfig(current_config);
             SIO_SendDetectedCard(rfid_uid, current_config);
             LCD_WriteUserInfo(get_last_uid_char(rfid_uid), current_config);
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
         }
         break;
 
@@ -163,7 +166,7 @@ void CNTR_Motor(void)
 
         clean_config();
         LED_UpdateConfig(current_config);
-        state = INPUT_WAIT_DETECT;
+        finish_comand();
         break;
 
     case SERIAL_PROCESS_CMD:
@@ -184,11 +187,11 @@ void CNTR_Motor(void)
 
         case CMD_ESC:
             SIO_SendMainMenu();
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
             break;
 
         default:
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
             break;
         }
         break;
@@ -202,24 +205,19 @@ void CNTR_Motor(void)
         {
             SIO_SendNoUser();
         }
-        state = INPUT_WAIT_DETECT;
+        finish_comand();
         break;
 
     case SERIAL_SEND_CONFIGS:
-        state = SERIAL_SEND_USER_CONFIG;
-        if (users_sent == NUM_USERS) // Once all users have been sent, reset the counter and stop
+        for (BYTE user = 0; user < NUM_USERS;)
         {
-            users_sent = 0;
-            state = INPUT_WAIT_DETECT;
+            if (EEPROM_ReadConfigForUser(user, current_config))
+            {
+                SIO_SendStoredConfig(USER_GetUserByPosition(user), current_config);
+                user++;
+            }
         }
-        break;
-
-    case SERIAL_SEND_USER_CONFIG:
-        if (EEPROM_ReadConfigForUser(users_sent, current_config))
-        {
-            SIO_SendStoredConfig(USER_GetUserByPosition(users_sent), current_config);
-            users_sent++;
-        }
+        finish_comand();
         break;
 
     case SERIAL_WAIT_TIME_INPUT:
@@ -227,7 +225,7 @@ void CNTR_Motor(void)
         {
             HORA_SetTime(time_hour, time_minute);
             LCD_UpdateTime(time_hour, time_minute);
-            state = INPUT_WAIT_DETECT;
+            finish_comand();
         }
         break;
     }
@@ -248,6 +246,7 @@ static void reset_system(void)
     LED_UpdateConfig(current_config);
     LCD_WriteNoUserInfo();
     KEY_SetUserInside(FALSE);
+    SIO_SendKeyReset();
 }
 
 static void clean_uid(void)
@@ -280,4 +279,30 @@ static BYTE get_last_uid_char(const BYTE *uid)
         return '0' + last_nibble;
     }
     return 'A' + last_nibble - 10;
+}
+
+static void init_controller_variables(void)
+{
+    state = INPUT_WAIT_DETECT;
+    current_user_position = USER_NOT_FOUND;
+    time_hour = 0;
+    time_minute = 0;
+    command_read = KEY_NO_COMMAND;
+    led_num = 0;
+    led_intensity = 0;
+    user_pos = 0;
+    last_uid_char = '-';
+
+    // Initialize arrays
+    clean_uid();
+    clean_config();
+}
+
+static void finish_comand(void)
+{
+    command_read = KEY_NO_COMMAND;
+    state = INPUT_WAIT_DETECT;
+    TiResetTics(TI_CNTR);
+    while (TiGetTics(TI_CNTR) < 1)
+        ; // Add 2ms wait to ensure the command is finished
 }

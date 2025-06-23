@@ -36,15 +36,20 @@ void RSI_High(void) // For IntelliSense only
     if (INTCONbits.TMR0IF == 1)
     {
         Timer0_ISR();
+        LED_Motor();
     }
 }
 
 void init_users(void)
 {
-    EEPROM_StoreConfigForUser(0, (BYTE[]){9, 9, 9, 0, 0, 0});
-    EEPROM_StoreConfigForUser(1, (BYTE[]){9, 9, 0, 0, 0, 9});
-    EEPROM_StoreConfigForUser(2, (BYTE[]){9, 0, 0, 0, 9, 9});
-    EEPROM_StoreConfigForUser(3, (BYTE[]){0, 0, 0, 9, 9, 9});
+    while (EEPROM_StoreConfigForUser(0, (BYTE[]){1, 1, 1, 1, 1, 1}))
+        ; // FAKE USER
+    while (EEPROM_StoreConfigForUser(1, (BYTE[]){2, 2, 2, 2, 2, 2}))
+        ; // FAKE USER
+    while (EEPROM_StoreConfigForUser(2, (BYTE[]){3, 3, 3, 3, 3, 3}))
+        ; // FAKE USER
+    while (EEPROM_StoreConfigForUser(3, (BYTE[]){4, 4, 4, 4, 4, 4}))
+        ; // FAKE USER
 }
 
 /* =======================================
@@ -69,7 +74,6 @@ void main(void)
     while (TRUE)
     {
         // Run all hardware module motors
-        LED_Motor();  // Update PWM light control
         KEY_Motor();  // Process keypad input
         HORA_Motor(); // Update time management
         RFID_Motor(); // Update RFID motor

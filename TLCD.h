@@ -45,7 +45,7 @@ void LCD_Init(void);
 void LCD_WriteNoUserInfo(void);
 // Post: Display shows "no user" state with current system time
 
-void LCD_WriteUserInfo(BYTE last_uid_char, BYTE *light_config);
+void LCD_WriteUserInfo(BYTE last_uid_char, const BYTE *light_config);
 // Pre: Valid printable char, light_config[6] with values [0x0-0xA]
 // Post: Display shows user char and lights with current system time
 
@@ -53,7 +53,7 @@ void LCD_UpdateTime(BYTE hour, BYTE minute);
 // Pre: hour [0-23], minute [0-59]
 // Post: System time updated and displayed, preserves user char and light config
 
-void LCD_UpdateLightConfig(BYTE *light_config);
+void LCD_UpdateLightConfig(const BYTE *light_config);
 // Pre: light_config[6] with values [0x0-0xA]
 // Post: Light values updated, preserves user char and time
 
