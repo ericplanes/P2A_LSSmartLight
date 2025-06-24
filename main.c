@@ -40,14 +40,6 @@ void RSI_High(void) // For IntelliSense only
     }
 }
 
-void init_users(void)
-{
-    while (!EEPROM_StoreConfigForUser(0, (BYTE[]){1, 2, 3, 4, 5, 6}))
-        ;
-    while (!EEPROM_StoreConfigForUser(2, (BYTE[]){7, 8, 9, 10, 0, 1}))
-        ;
-}
-
 /* =======================================
  *               MAIN
  * ======================================= */
@@ -63,8 +55,6 @@ void main(void)
     HORA_Init();   // Time management
     RFID_Init();   // RFID card reader
     CNTR_Init();   // Main system controller, has to be the last one
-
-    init_users();
 
     // Main cooperative loop
     while (TRUE)
