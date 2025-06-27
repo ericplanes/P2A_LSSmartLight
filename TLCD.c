@@ -145,9 +145,6 @@ void LCD_WriteUserInfo(BYTE last_uid_char, const BYTE *light_config)
     // Update user character (position 0,0)
     update_user_char(last_uid_char);
 
-    // Update time (current time is already stored in static variables)
-    LCD_UpdateTime(current_hour, current_minute);
-
     // Update light configuration
     LCD_UpdateLightConfig(light_config);
 }
