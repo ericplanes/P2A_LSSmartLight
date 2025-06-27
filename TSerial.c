@@ -48,9 +48,9 @@ void SIO_Init(void)
 
     // Maximum speed configuration
     TXSTAbits.BRGH = 1;    // High speed mode
-    BAUDCONbits.BRG16 = 1; // 16-bit baud rate generator for higher speeds
-    SPBRG = 7;             // 1,000,000 baud @ 32 MHz (104x faster than 9600!)
-    SPBRGH = 0;            // High byte of 16-bit baud rate
+    BAUDCONbits.BRG16 = 0; // 16-bit baud rate generator for higher speeds
+    SPBRG = 1;             // 1,000,000 baud @ 32 MHz (104x faster than 9600!)
+    SPBRGH = 1;            // High byte of 16-bit baud rate
 
     TXSTAbits.SYNC = 0;
     TXSTAbits.TXEN = 1;
