@@ -65,6 +65,7 @@ void main(void)
         RFID_Motor(); // Update RFID motor
 
         // Run main system controller
-        CNTR_Motor(); // Coordinate all system logic
+        if (!SIO_IsWritting())
+            CNTR_Motor(); // Coordinate all system logic
     }
 }

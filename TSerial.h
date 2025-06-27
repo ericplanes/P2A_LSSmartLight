@@ -87,4 +87,6 @@ void SIO_SendUnknownCard(const BYTE *uid_bytes);
 void SIO_SendKeyReset(void);
 // Post: Sends keypad reset message to PC
 
+BOOL SIO_IsWritting(void);
+
 #endif

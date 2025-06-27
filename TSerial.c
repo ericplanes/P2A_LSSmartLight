@@ -25,7 +25,7 @@ static BYTE uid_buffer[] = UID_BASE_STRING;
 
 // Buffer for config formatting
 static BYTE config_buffer[CONFIG_BUFFER_SIZE];
-
+static BOOL writing = FALSE;
 /* =======================================
  *        PRIVATE FUNCTION HEADERS
  * ======================================= */
@@ -209,6 +209,11 @@ void SIO_SendKeyReset(void)
     SIO_SendMainMenu();
 }
 
+BOOL SIO_IsWritting(void)
+{
+    return writing;
+}
+
 /* =======================================
  *        PRIVATE FUNCTION BODIES
  * ======================================= */
@@ -224,12 +229,29 @@ static BOOL send_char(BYTE character)
 
 static void send_string(BYTE *string)
 {
-    BYTE i = 0;
-    while (string[i] != '\0')
+    static BYTE *current_string = 0;
+    static BYTE current_index = 0;
+
+    // If new string provided, start sending it
+    if (string != 0)
     {
-        while (!send_char(string[i]))
-            ;
-        i++;
+        current_string = string;
+        current_index = 0;
+        writing = TRUE;
+    }
+
+    // If we've reached the end of the string, we're done
+    if (current_string[current_index] == '\0')
+    {
+        current_string = 0;
+        current_index = 0;
+        writing = FALSE;
+    }
+
+    // Try to send the current character
+    if (send_char(current_string[current_index]))
+    {
+        current_index++;
     }
 }
 
