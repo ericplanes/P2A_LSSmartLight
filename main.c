@@ -46,6 +46,7 @@ void RSI_High(void) // For IntelliSense only
 void main(void)
 {
     TRISEbits.TRISE2 = 0;
+
     // Initialize all modules in proper order
     TiInit();      // Timer system (must be first)
     SIO_Init();    // Serial communication
@@ -66,8 +67,10 @@ void main(void)
         HORA_Motor(); // Update time management
         RFID_Motor(); // Update RFID motor
 
-        // Run main system controller
-        if (!SIO_IsWritting())
-            CNTR_Motor(); // Coordinate all system logic
+        // Continue serial transmission if active
+        if (SIO_IsWritting())
+            SIO_ContinueTransmission(); // Continue sending current string
+        else
+            CNTR_Motor(); // Coordinate all system logic only when not transmitting
     }
 }

@@ -88,5 +88,9 @@ void SIO_SendKeyReset(void);
 // Post: Sends keypad reset message to PC
 
 BOOL SIO_IsWritting(void);
+// Post: Returns TRUE if serial transmission is active, FALSE otherwise
+
+void SIO_ContinueTransmission(void);
+// Post: Continues sending the current string if transmission is active
 
 #endif

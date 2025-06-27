@@ -214,6 +214,11 @@ BOOL SIO_IsWritting(void)
     return writing;
 }
 
+void SIO_ContinueTransmission(void)
+{
+    send_string(0); // Continue sending current string
+}
+
 /* =======================================
  *        PRIVATE FUNCTION BODIES
  * ======================================= */
