@@ -45,6 +45,8 @@ void RSI_High(void) // For IntelliSense only
  * ======================================= */
 void main(void)
 {
+    TRISEbits.TRISE2 = 0;
+
     // Initialize all modules in proper order
     TiInit();      // Timer system (must be first)
     SIO_Init();    // Serial communication
@@ -59,6 +61,7 @@ void main(void)
     // Main cooperative loop
     while (TRUE)
     {
+        LATEbits.LATE2 ^= 1;
         // Run all hardware module motors
         KEY_Motor();  // Process keypad input
         HORA_Motor(); // Update time management
