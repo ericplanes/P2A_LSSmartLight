@@ -240,12 +240,17 @@ static void send_string(BYTE *string)
         writing = TRUE;
     }
 
+    // Safety check: If no string to send, exit early
+    if (current_string == 0)
+        return;
+
     // If we've reached the end of the string, we're done
     if (current_string[current_index] == '\0')
     {
         current_string = 0;
         current_index = 0;
         writing = FALSE;
+        return; // Exit after completing transmission
     }
 
     // Try to send the current character
