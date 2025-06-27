@@ -67,7 +67,6 @@ void CNTR_Init(void)
     init_controller_variables();
     SIO_SendMainMenu();
     LCD_WriteNoUserInfo();
-    TiResetTics(TI_TEST);
 }
 
 void CNTR_Motor(void)
