@@ -46,10 +46,11 @@ void SIO_Init(void)
     TRISCbits.TRISC6 = 0; // TX output
     TRISCbits.TRISC7 = 1; // RX input
 
-    // High speed configuration (1 Mbaud - 104x faster than 9600)
+    // High speed configuration (125000 baud)
     TXSTAbits.BRGH = 1;    // High speed mode
-    BAUDCONbits.BRG16 = 0; // 8-bit baud rate generator mode
-    SPBRG = 1;             // 1,000,000 baud @ 32 MHz (FOSC/(16×(SPBRG+1)))
+    BAUDCONbits.BRG16 = 1; // 8-bit baud rate generator mode
+    SPBRG = 63;             // 125000 baud @ 32 MHz (FOSC/(16×(SPBRG+1)))
+    // SPBRGH not used in 8-bit mode (BRG16=0)
 
     TXSTAbits.SYNC = 0;
     TXSTAbits.TXEN = 1;
