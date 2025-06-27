@@ -96,26 +96,25 @@ void RFID_Motor(void)
     retry_counter = RFID_RETRY_COUNT;
 
     // Setup MFRC522 registers for card detection
-    mfrc522_write_register(BITFRAMINGREG, 0x07);
-    mfrc522_write_register(COMMIENREG, 0x77 | 0x80);
-    mfrc522_clear_register_bit(COMMIRQREG, 0x80);
-    mfrc522_set_register_bit(FIFOLEVELREG, 0x80);
-    mfrc522_write_register(COMMANDREG, PCD_IDLE);
-    mfrc522_write_register(FIFODATAREG, PICC_REQIDL);
-    mfrc522_write_register(COMMANDREG, PCD_TRANSCEIVE);
-    mfrc522_set_register_bit(BITFRAMINGREG, 0x80);
+    mfrc522_write_register(BITFRAMINGREG, 0x07);        // Configura bits de trama
+    mfrc522_write_register(COMMIENREG, 0x77 | 0x80);    // Habilita interrupcions
+    mfrc522_clear_register_bit(COMMIRQREG, 0x80);       // Neteja interrupcions
+    mfrc522_set_register_bit(FIFOLEVELREG, 0x80);       // Reinicia FIFO
+    mfrc522_write_register(COMMANDREG, PCD_IDLE);       // Atura comandes
+    mfrc522_write_register(FIFODATAREG, PICC_REQIDL);   // Escriu "Request Idle"
+    mfrc522_write_register(COMMANDREG, PCD_TRANSCEIVE); // Envia comanda
+    mfrc522_set_register_bit(BITFRAMINGREG, 0x80);      // Inicia transmissió
 
     rfid_reading_state = 1;
     break;
 
-  case 1: // Wait for card response with retry mechanism
-    if (mfrc522_read_register(COMMIRQREG) & 0x30)
+  case 1:                                         // Wait for card response with retry mechanism
+    if (mfrc522_read_register(COMMIRQREG) & 0x30) // Check if there is an RFID interruption (read card response)
     {
       // IRQ fired - card response received
-      mfrc522_clear_register_bit(BITFRAMINGREG, 0x80);
+      mfrc522_clear_register_bit(BITFRAMINGREG, 0x80); // Stops the interruptions for RFID
 
-      // Check for communication errors
-      if (!(mfrc522_read_register(ERRORREG) & 0x1B))
+      if (!(mfrc522_read_register(ERRORREG) & 0x1B)) // Check for communication errors
       {
         // No errors - attempt to read card UID
         if (mfrc522_read_card_uid(card_uid))
