@@ -26,17 +26,27 @@
 // RFID reading timing and retry settings
 #define RFID_SCAN_DELAY (ONE_SECOND / 2) // 500ms delay between scans
 #define RFID_RETRY_COUNT 15              // Maximum retry attempts
+#define TIMEOUT_COUNT 1000               // Reduced timeout for cooperative operation
 
 /* =======================================
  *         PRIVATE VARIABLES
  * ======================================= */
 
-// RFID card reading state machine
-static BYTE rfid_reading_state = 0;
+// RFID card reading state machine (expanded for cooperative operation)
+static BYTE rfid_state = 0;
 static BYTE retry_counter = 0;
 static BOOL rfid_card_detected = FALSE;
 static BYTE card_uid[5] = {0};
 static BYTE card_data_position = 0;
+
+// State machine working variables (for multi-step operations)
+static WORD timeout_counter = 0;
+static BYTE crc_counter = 0;
+static BYTE temp_data[16];
+static BYTE temp_len = 0;
+static WORD temp_response_len = 0;
+static BYTE checksum = 0;
+static BYTE halt_cmd[4];
 
 /* =======================================
  *       PRIVATE FUNCTION HEADERS
@@ -51,15 +61,12 @@ static void mfrc522_set_register_bit(BYTE addr, BYTE mask);
 // MFRC522 hardware initialization and control
 static void mfrc522_reset_chip(void);
 static void mfrc522_antenna_on(void);
-static void mfrc522_antenna_off(void);
 static void mfrc522_initialize_chip(void);
 
-// RFID card detection and reading functions
-static BYTE mfrc522_send_command_to_card(BYTE command, BYTE *send_data, BYTE send_len, BYTE *back_data, WORD *back_len);
-static void mfrc522_calculate_crc(BYTE *data_in, BYTE length, BYTE *data_out);
-static BYTE mfrc522_anticollision_detection(BYTE *serial_number);
-static BYTE mfrc522_read_card_uid(BYTE *uid_buffer);
-static void mfrc522_halt_card_communication(void);
+// Cooperative helper functions
+static void setup_anticollision_command(void);
+static void setup_crc_calculation(BYTE *data, BYTE len);
+static void setup_halt_command(void);
 
 /* =======================================
  *         PUBLIC FUNCTION BODIES
@@ -67,90 +74,218 @@ static void mfrc522_halt_card_communication(void);
 
 void RFID_Init(void)
 {
-  // Configure MFRC522 SPI pins as per hardware setup
+  // Configure MFRC522 SPI pins
   DIR_MFRC522_SO = 1;  // MISO input
   DIR_MFRC522_SI = 0;  // MOSI output
   DIR_MFRC522_SCK = 0; // Clock output
   DIR_MFRC522_CS = 0;  // Chip select output
   DIR_MFRC522_RST = 0; // Reset output
 
-  // Initialize MFRC522 chip for card reading
+  // Initialize MFRC522 chip
   mfrc522_initialize_chip();
 
-  // Reset card reading state machine
-  rfid_reading_state = 0;
+  // Reset state machine
+  rfid_state = 0;
   retry_counter = 0;
   card_data_position = 0;
   rfid_card_detected = FALSE;
+  timeout_counter = 0;
+  crc_counter = 0;
 
-  // Reset RFID timer for cooperative operation
+  // Reset timer
   TiResetTics(TI_RFID);
 }
 
 void RFID_Motor(void)
 {
-  switch (rfid_reading_state)
+  BYTE n, i;
+
+  switch (rfid_state)
   {
-  case 0: // Initialize card detection sequence
-    // Reset retry counter for new detection cycle
+  case 0: // Initialize card detection (PICC_REQIDL)
     retry_counter = RFID_RETRY_COUNT;
+    timeout_counter = TIMEOUT_COUNT;
 
-    // Setup MFRC522 registers for card detection
-    mfrc522_write_register(BITFRAMINGREG, 0x07);        // Configura bits de trama
-    mfrc522_write_register(COMMIENREG, 0x77 | 0x80);    // Habilita interrupcions
-    mfrc522_clear_register_bit(COMMIRQREG, 0x80);       // Neteja interrupcions
-    mfrc522_set_register_bit(FIFOLEVELREG, 0x80);       // Reinicia FIFO
-    mfrc522_write_register(COMMANDREG, PCD_IDLE);       // Atura comandes
-    mfrc522_write_register(FIFODATAREG, PICC_REQIDL);   // Escriu "Request Idle"
-    mfrc522_write_register(COMMANDREG, PCD_TRANSCEIVE); // Envia comanda
-    mfrc522_set_register_bit(BITFRAMINGREG, 0x80);      // Inicia transmissió
+    // Setup MFRC522 for card detection
+    mfrc522_write_register(0x0D, 0x07);           // BitFramingReg
+    mfrc522_write_register(0x02, 0x77 | 0x80);    // ComIEnReg
+    mfrc522_clear_register_bit(0x04, 0x80);       // ComIrqReg
+    mfrc522_set_register_bit(0x0A, 0x80);         // FIFOLevelReg
+    mfrc522_write_register(0x01, PCD_IDLE);       // CommandReg
+    mfrc522_write_register(0x09, PICC_REQIDL);    // FIFODataReg
+    mfrc522_write_register(0x01, PCD_TRANSCEIVE); // Start command
+    mfrc522_set_register_bit(0x0D, 0x80);         // StartSend
 
-    rfid_reading_state = 1;
+    rfid_state = 1;
     break;
 
-  case 1:                                         // Wait for card response with retry mechanism
-    if (mfrc522_read_register(COMMIRQREG) & 0x30) // Check if there is an RFID interruption (read card response)
+  case 1:                            // Wait for REQIDL response (cooperative)
+    n = mfrc522_read_register(0x04); // ComIrqReg
+    if (n & 0x30)                    // Check for RxIRq or IdleIRq
     {
-      // IRQ fired - card response received
-      mfrc522_clear_register_bit(BITFRAMINGREG, 0x80); // Stops the interruptions for RFID
+      mfrc522_clear_register_bit(0x0D, 0x80); // Stop transmission
 
-      if (!(mfrc522_read_register(ERRORREG) & 0x1B)) // Check for communication errors
+      if (!(mfrc522_read_register(0x06) & 0x1B)) // No errors
       {
-        // No errors - attempt to read card UID
-        if (mfrc522_read_card_uid(card_uid))
-        {
-          // UID successfully read
-          rfid_card_detected = TRUE;
-          card_data_position = 0;
-        }
+        // Card detected - move to anticollision
+        rfid_state = 2;
       }
-
-      // Send HALT command to stop card communication
-      mfrc522_halt_card_communication();
-
-      // Start delay timer and move to delay state
-      TiResetTics(TI_RFID);
-      rfid_reading_state = 2;
+      else
+      {
+        // Error - retry or give up
+        rfid_state = 9; // Go to delay state
+      }
     }
     else
     {
-      // No IRQ yet - decrement retry counter
-      retry_counter--;
-      if (retry_counter == 0)
+      // Still waiting - check timeout
+      timeout_counter--;
+      if (timeout_counter == 0)
       {
-        // Maximum retries reached - give up and restart cycle
-        mfrc522_clear_register_bit(BITFRAMINGREG, 0x80);
-        TiResetTics(TI_RFID);
-        rfid_reading_state = 2;
+        retry_counter--;
+        if (retry_counter > 0)
+        {
+          rfid_state = 0; // Retry
+        }
+        else
+        {
+          mfrc522_clear_register_bit(0x0D, 0x80);
+          rfid_state = 9; // Give up, go to delay
+        }
       }
-      // Otherwise continue waiting in this state
     }
     break;
 
-  case 2: // Wait before starting next scan cycle
+  case 2: // Initialize anticollision command
+    setup_anticollision_command();
+    timeout_counter = TIMEOUT_COUNT;
+    rfid_state = 3;
+    break;
+
+  case 3:                            // Wait for anticollision response (cooperative)
+    n = mfrc522_read_register(0x04); // ComIrqReg
+    if (n & 0x30)                    // Check completion
+    {
+      mfrc522_clear_register_bit(0x0D, 0x80);
+
+      if (!(mfrc522_read_register(0x06) & 0x1B)) // No errors
+      {
+        // Read response data
+        n = mfrc522_read_register(0x0A); // FIFOLevelReg
+        if (n > 16)
+          n = 16;
+
+        for (i = 0; i < n; i++)
+          temp_data[i] = mfrc522_read_register(0x09);
+        temp_len = n;
+
+        rfid_state = 4; // Process response
+      }
+      else
+      {
+        rfid_state = 9; // Error - go to delay
+      }
+    }
+    else
+    {
+      timeout_counter--;
+      if (timeout_counter == 0)
+      {
+        mfrc522_clear_register_bit(0x0D, 0x80);
+        rfid_state = 9; // Timeout - go to delay
+      }
+    }
+    break;
+
+  case 4: // Process anticollision response and verify checksum
+    if (temp_len >= 5)
+    {
+      // Verify checksum
+      checksum = 0;
+      for (i = 0; i < 4; i++)
+      {
+        checksum ^= temp_data[i];
+        card_uid[i] = temp_data[i]; // Copy UID
+      }
+
+      if (checksum == temp_data[4])
+      {
+        // Valid UID - prepare HALT command
+        card_uid[4] = temp_data[4];
+        rfid_card_detected = TRUE;
+        card_data_position = 0;
+        rfid_state = 5; // Initialize CRC for HALT
+      }
+      else
+      {
+        rfid_state = 9; // Checksum error - go to delay
+      }
+    }
+    else
+    {
+      rfid_state = 9; // Invalid response - go to delay
+    }
+    break;
+
+  case 5: // Initialize CRC calculation for HALT (cooperative)
+    halt_cmd[0] = PICC_HALT;
+    halt_cmd[1] = 0;
+    setup_crc_calculation(halt_cmd, 2);
+    crc_counter = 255; // Timeout for CRC
+    rfid_state = 6;
+    break;
+
+  case 6:                            // Wait for CRC calculation completion (cooperative)
+    n = mfrc522_read_register(0x05); // DivIrqReg
+    if (n & 0x04)                    // CRC calculation complete
+    {
+      halt_cmd[2] = mfrc522_read_register(0x22); // CRCResultRegL
+      halt_cmd[3] = mfrc522_read_register(0x21); // CRCResultRegH
+      rfid_state = 7;                            // Send HALT command
+    }
+    else
+    {
+      crc_counter--;
+      if (crc_counter == 0)
+      {
+        // CRC timeout - skip HALT and go to delay
+        rfid_state = 9;
+      }
+    }
+    break;
+
+  case 7: // Send HALT command
+    setup_halt_command();
+    timeout_counter = TIMEOUT_COUNT;
+    rfid_state = 8;
+    break;
+
+  case 8:                            // Wait for HALT completion (cooperative)
+    n = mfrc522_read_register(0x04); // ComIrqReg
+    if (n & 0x30)                    // Command complete
+    {
+      mfrc522_clear_register_bit(0x0D, 0x80);
+      mfrc522_clear_register_bit(0x08, 0x08); // Clean up
+      TiResetTics(TI_RFID);
+      rfid_state = 9;
+    }
+    else
+    {
+      timeout_counter--;
+      if (timeout_counter == 0)
+      {
+        mfrc522_clear_register_bit(0x0D, 0x80);
+        mfrc522_clear_register_bit(0x08, 0x08);
+        TiResetTics(TI_RFID);
+        rfid_state = 9;
+      }
+    }
+    break;
+
+  case 9: // Delay between scans
     if (TiGetTics(TI_RFID) >= RFID_SCAN_DELAY)
     {
-      rfid_reading_state = 0;
+      rfid_state = 0;
     }
     break;
   }
@@ -166,7 +301,7 @@ BOOL RFID_GetReadUserId(BYTE *user_uid_buffer)
   if (!rfid_card_detected)
     return FALSE;
 
-  // Transfer UID data byte by byte (cooperative approach)
+  // Cooperative data transfer
   if (card_data_position < 5)
   {
     user_uid_buffer[card_data_position] = card_uid[card_data_position];
@@ -174,7 +309,7 @@ BOOL RFID_GetReadUserId(BYTE *user_uid_buffer)
     return FALSE;
   }
 
-  // Transfer complete - reset for next reading
+  // Transfer complete
   rfid_card_detected = FALSE;
   card_data_position = 0;
   return TRUE;
@@ -192,7 +327,7 @@ static BYTE mfrc522_read_register(BYTE address)
   MFRC522_SCK = 0;
   MFRC522_CS = 0;
 
-  // Send address byte
+  // Send address
   for (i = 0; i < 8; i++)
   {
     MFRC522_SI = (addr & 0x80) ? 1 : 0;
@@ -201,7 +336,7 @@ static BYTE mfrc522_read_register(BYTE address)
     MFRC522_SCK = 0;
   }
 
-  // Read data byte
+  // Read data
   for (i = 0; i < 8; i++)
   {
     MFRC522_SCK = 1;
@@ -224,7 +359,7 @@ static void mfrc522_write_register(BYTE address, BYTE value)
   MFRC522_SCK = 0;
   MFRC522_CS = 0;
 
-  // Send address byte
+  // Send address
   for (i = 0; i < 8; i++)
   {
     MFRC522_SI = (addr & 0x80) ? 1 : 0;
@@ -233,7 +368,7 @@ static void mfrc522_write_register(BYTE address, BYTE value)
     MFRC522_SCK = 0;
   }
 
-  // Send data byte
+  // Send data
   for (i = 0; i < 8; i++)
   {
     MFRC522_SI = (value & 0x80) ? 1 : 0;
@@ -271,11 +406,6 @@ static void mfrc522_antenna_on(void)
   mfrc522_set_register_bit(0x14, 0x03);
 }
 
-static void mfrc522_antenna_off(void)
-{
-  mfrc522_clear_register_bit(0x14, 0x03);
-}
-
 static void mfrc522_initialize_chip(void)
 {
   MFRC522_CS = 1;
@@ -287,130 +417,54 @@ static void mfrc522_initialize_chip(void)
   mfrc522_write_register(0x2C, 0);
   mfrc522_write_register(0x15, 0x40);
   mfrc522_write_register(0x11, 0x3D);
-  mfrc522_antenna_off();
+  mfrc522_clear_register_bit(0x14, 0x03); // Antenna off
   mfrc522_antenna_on();
 }
 
-static BYTE mfrc522_anticollision_detection(BYTE *serial_number)
+static void setup_anticollision_command(void)
 {
-  BYTE status = MI_ERR;
-  BYTE i, checksum = 0;
-  WORD response_length;
+  mfrc522_write_register(0x0D, 0x00);        // BitFramingReg
+  mfrc522_write_register(0x02, 0x77 | 0x80); // ComIEnReg
+  mfrc522_clear_register_bit(0x04, 0x80);    // ComIrqReg
+  mfrc522_set_register_bit(0x0A, 0x80);      // FIFOLevelReg
+  mfrc522_write_register(0x01, PCD_IDLE);    // CommandReg
 
-  mfrc522_write_register(0x0D, 0x00);
-  serial_number[0] = PICC_ANTICOLL;
-  serial_number[1] = 0x20;
-  mfrc522_clear_register_bit(0x08, 0x08);
+  // Load anticollision command
+  mfrc522_write_register(0x09, PICC_ANTICOLL);
+  mfrc522_write_register(0x09, 0x20);
 
-  status = mfrc522_send_command_to_card(PCD_TRANSCEIVE, serial_number, 2, serial_number, &response_length);
-  if (status == MI_OK)
-  {
-    // Verify checksum
-    for (i = 0; i < 4; i++)
-      checksum ^= serial_number[i];
-    if (checksum != serial_number[4])
-      status = MI_ERR;
-  }
-  return status;
+  mfrc522_clear_register_bit(0x08, 0x08); // Clear CollReg
+  mfrc522_write_register(0x01, PCD_TRANSCEIVE);
+  mfrc522_set_register_bit(0x0D, 0x80); // StartSend
 }
 
-static BYTE mfrc522_read_card_uid(BYTE *uid_buffer)
+static void setup_crc_calculation(BYTE *data, BYTE len)
 {
-  BYTE status = mfrc522_anticollision_detection(uid_buffer);
-  uid_buffer[5] = 0;
-  return status == MI_OK;
+  BYTE i;
+  mfrc522_clear_register_bit(0x05, 0x04); // Clear CRCIRq
+  mfrc522_set_register_bit(0x0A, 0x80);   // FlushBuffer
+
+  // Load data into FIFO
+  for (i = 0; i < len; i++)
+    mfrc522_write_register(0x09, data[i]);
+
+  mfrc522_write_register(0x01, PCD_CALCCRC); // Start CRC calculation
 }
 
-static void mfrc522_halt_card_communication(void)
+static void setup_halt_command(void)
 {
-  WORD response_length;
-  BYTE halt_command[4];
-  halt_command[0] = PICC_HALT;
-  halt_command[1] = 0;
-  mfrc522_calculate_crc(halt_command, 2, &halt_command[2]);
+  mfrc522_write_register(0x02, 0x77 | 0x80); // ComIEnReg
+  mfrc522_clear_register_bit(0x04, 0x80);    // ComIrqReg
+  mfrc522_set_register_bit(0x0A, 0x80);      // FIFOLevelReg
+  mfrc522_write_register(0x01, PCD_IDLE);    // CommandReg
+
+  // Load HALT command with CRC
+  mfrc522_write_register(0x09, halt_cmd[0]);
+  mfrc522_write_register(0x09, halt_cmd[1]);
+  mfrc522_write_register(0x09, halt_cmd[2]);
+  mfrc522_write_register(0x09, halt_cmd[3]);
+
   mfrc522_clear_register_bit(0x08, 0x80);
-  mfrc522_send_command_to_card(PCD_TRANSCEIVE, halt_command, 4, halt_command, &response_length);
-  mfrc522_clear_register_bit(0x08, 0x08);
-}
-
-static void mfrc522_calculate_crc(BYTE *data_in, BYTE length, BYTE *data_out)
-{
-  BYTE i, n;
-  mfrc522_clear_register_bit(0x05, 0x04);
-  mfrc522_set_register_bit(0x0A, 0x80);
-
-  for (i = 0; i < length; i++)
-    mfrc522_write_register(0x09, data_in[i]);
-  mfrc522_write_register(0x01, PCD_CALCCRC);
-
-  i = 0xFF;
-  do
-  {
-    n = mfrc522_read_register(0x05);
-    i--;
-  } while (i && !(n & 0x04));
-
-  data_out[0] = mfrc522_read_register(0x22);
-  data_out[1] = mfrc522_read_register(0x21);
-}
-
-static BYTE mfrc522_send_command_to_card(BYTE command, BYTE *send_data, BYTE send_len, BYTE *back_data, WORD *back_len)
-{
-  BYTE status = MI_ERR;
-  BYTE irq_enable = 0, wait_irq = 0;
-  BYTE i, n, last_bits;
-  WORD timeout_counter;
-
-  if (command == 0x0E)
-  {
-    irq_enable = 0x12;
-    wait_irq = 0x10;
-  }
-  else if (command == PCD_TRANSCEIVE)
-  {
-    irq_enable = 0x77;
-    wait_irq = 0x30;
-  }
-
-  mfrc522_write_register(0x02, irq_enable | 0x80);
-  mfrc522_clear_register_bit(0x04, 0x80);
-  mfrc522_set_register_bit(0x0A, 0x80);
-  mfrc522_write_register(0x01, PCD_IDLE);
-
-  for (i = 0; i < send_len; i++)
-    mfrc522_write_register(0x09, send_data[i]);
-
-  mfrc522_write_register(0x01, command);
-  if (command == PCD_TRANSCEIVE)
-    mfrc522_set_register_bit(0x0D, 0x80);
-
-  timeout_counter = 0xFFFF;
-  do
-  {
-    n = mfrc522_read_register(0x04);
-    timeout_counter--;
-  } while (timeout_counter && !(n & 0x01) && !(n & wait_irq));
-
-  mfrc522_clear_register_bit(0x0D, 0x80);
-
-  if (timeout_counter && !(mfrc522_read_register(0x06) & 0x1B))
-  {
-    status = MI_OK;
-    if (n & irq_enable & 0x01)
-      status = MI_NOTAGERR;
-    if (command == PCD_TRANSCEIVE)
-    {
-      n = mfrc522_read_register(0x0A);
-      last_bits = mfrc522_read_register(0x0C) & 0x07;
-      *back_len = last_bits ? ((n - 1) * 8 + last_bits) : (n * 8);
-      if (n == 0)
-        n = 1;
-      else if (n > 16)
-        n = 16;
-      for (i = 0; i < n; i++)
-        back_data[i] = mfrc522_read_register(0x09);
-      back_data[i] = 0;
-    }
-  }
-  return status;
+  mfrc522_write_register(0x01, PCD_TRANSCEIVE);
+  mfrc522_set_register_bit(0x0D, 0x80); // StartSend
 }
