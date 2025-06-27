@@ -50,7 +50,6 @@ void SIO_Init(void)
     TXSTAbits.BRGH = 1;    // High speed mode
     BAUDCONbits.BRG16 = 0; // 8-bit baud rate generator mode
     SPBRG = 1;             // 1,000,000 baud @ 32 MHz (FOSC/(16×(SPBRG+1)))
-    // SPBRGH not used in 8-bit mode (BRG16=0)
 
     TXSTAbits.SYNC = 0;
     TXSTAbits.TXEN = 1;
