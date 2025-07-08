@@ -2,6 +2,8 @@
 #include "TTimer.h"
 #include "TLCD.h"
 
+#define HOURS 23
+
 // Static variables for time keeping
 static BYTE current_hour;    // 0-99 hours
 static BYTE current_minutes; // 0-59 minutes
@@ -38,7 +40,7 @@ void HORA_Motor(void)
             current_minutes = 0;
 
             // Handle hour overflow (wrap to 0 after 99)
-            if (current_hour > 99)
+            if (current_hour > HOURS)
             {
                 current_hour = 0;
             }
@@ -49,8 +51,8 @@ void HORA_Motor(void)
 
 void HORA_SetTime(BYTE hour, BYTE minutes)
 {
-    // Validate and set hour (0-99)
-    if (hour <= 99)
+    // Validate and set hour (0-23)
+    if (hour <= HOURS)
     {
         current_hour = hour;
     }
